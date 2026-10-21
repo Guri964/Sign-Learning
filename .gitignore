@@ -86,3 +86,6 @@ out/
 *.tmp
 *.bak
 *.orig
+
+# Local Git backup
+.git_backup/
