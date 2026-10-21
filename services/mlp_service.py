@@ -156,6 +156,23 @@ def get_reference_shape(word):
         load_mlp_model()
     return reference_shapes.get(word, None)
 
+def get_target_ghost_hand(word):
+    """Returns a single 21x3 wrist-relative right-hand target skeleton for webcam ghost-hand overlay."""
+    if reference_shapes is None:
+        load_mlp_model()
+    shape = reference_shapes.get(word)
+    if shape and shape.get("right") is not None:
+        return shape["right"]
+    raw = reference_landmarks.get(word)
+    if raw is not None and len(raw) >= 126:
+        right_arr = np.asarray(raw[63:126], dtype=np.float32)
+        if np.any(np.abs(right_arr) > 1e-6):
+            norm126 = normalize_wrist_relative(np.asarray(raw, dtype=np.float32))
+            return norm126[63:126].reshape(21, 3).tolist()
+    if shape and shape.get("left") is not None:
+        return [[-pt[0], pt[1], pt[2]] for pt in shape["left"]]
+    return None
+
 def get_all_words():
     if label_classes is None:
         load_mlp_model()
