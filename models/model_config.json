@@ -1,0 +1,28 @@
+{
+  "sequence_length": 20,
+  "num_classes": 20,
+  "input_features": 126,
+  "classes": [
+    "Hello",
+    "Thank you",
+    "How are you",
+    "happy",
+    "sad",
+    "bad",
+    "good",
+    "Peace",
+    "Friend",
+    "Mother",
+    "Father",
+    "Doctor",
+    "School",
+    "Hospital",
+    "Money",
+    "Medicine",
+    "Teacher",
+    "healthy",
+    "India",
+    "Student"
+  ],
+  "val_accuracy": 0.9722
+}

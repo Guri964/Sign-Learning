@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sign up — SignBridge</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet"/>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background: #050810; color: #e2e8f0; min-height: 100vh; }
+    .font-display { font-family: 'Manrope', sans-serif; }
+    .grid-bg {
+      background-image: linear-gradient(rgba(110,231,247,0.04) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(110,231,247,0.04) 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+    .input-field {
+      width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 0.6rem; padding: 0.75rem 1rem; color: #e2e8f0; font-size: 0.9rem;
+      font-family: 'Plus Jakarta Sans', sans-serif; outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .input-field:focus { border-color: rgba(110,231,247,0.5); box-shadow: 0 0 0 3px rgba(110,231,247,0.08); }
+    .input-field::placeholder { color: #475569; }
+    .btn-primary {
+      width: 100%; background: linear-gradient(135deg, #6ee7f7, #818cf8);
+      color: #050810; font-weight: 700; padding: 0.85rem 1rem; border-radius: 0.6rem;
+      border: none; cursor: pointer; font-size: 0.95rem; font-family: 'Plus Jakarta Sans', sans-serif;
+      transition: all 0.3s ease;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(110,231,247,0.3); }
+    .card {
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 1.25rem; padding: 2.5rem;
+    }
+    .alert-error {
+      background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);
+      color: #fca5a5; border-radius: 0.6rem; padding: 0.75rem 1rem; font-size: 0.875rem;
+    }
+    .role-option { display: none; }
+    .role-label {
+      display: flex; align-items: center; gap: 0.75rem; padding: 0.875rem 1rem;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 0.6rem; cursor: pointer; transition: all 0.2s; flex: 1;
+    }
+    .role-label:hover { border-color: rgba(110,231,247,0.3); background: rgba(110,231,247,0.05); }
+    .role-option:checked + .role-label {
+      border-color: rgba(110,231,247,0.6); background: rgba(110,231,247,0.08); color: #6ee7f7;
+    }
+    .glow {
+      position: absolute; width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(192,132,252,0.08) 0%, transparent 70%);
+      border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;
+    }
+  </style>
+</head>
+<body class="grid-bg flex items-center justify-center min-h-screen relative py-10">
+  <div class="glow"></div>
+
+  <div class="w-full max-w-md px-4 relative z-10">
+
+    <div class="text-center mb-8">
+      <a href="/" class="inline-flex items-center gap-2 mb-6">
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, #6ee7f7, #818cf8);">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#050810" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0m-2 6V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v4"/>
+            <path d="M18 11a2 2 0 0 1 2 2v1a8 8 0 0 1-8 8h-2a8 8 0 0 1-8-8V9a2 2 0 0 1 2-2v0a2 2 0 0 1 2 2"/>
+          </svg>
+        </div>
+        <span class="font-display text-lg font-bold text-white">SignBridge</span>
+      </a>
+      <h1 class="font-display text-3xl font-bold text-white mb-2">Create your account</h1>
+      <p class="text-slate-400 text-sm">Start learning Indian Sign Language today</p>
+    </div>
+
+    <div class="card">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert-error mb-5">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form method="POST" action="/signup">
+        <div class="space-y-5">
+
+          <div>
+            <label class="block text-sm font-500 text-slate-300 mb-2">Full name</label>
+            <input type="text" name="full_name" class="input-field" placeholder="Your full name" required/>
+          </div>
+
+          <div>
+            <label class="block text-sm font-500 text-slate-300 mb-2">Email address</label>
+            <input type="email" name="email" class="input-field" placeholder="you@example.com" required/>
+          </div>
+
+          <div>
+            <label class="block text-sm font-500 text-slate-300 mb-2">Password</label>
+            <input type="password" name="password" id="password" class="input-field" placeholder="At least 8 characters" required/>
+          </div>
+
+          <div>
+            <label class="block text-sm font-500 text-slate-300 mb-2">Confirm password</label>
+            <input type="password" name="confirm_password" id="confirm_password" class="input-field" placeholder="Repeat your password" required/>
+            <p id="pw-match-msg" class="text-xs mt-1.5 hidden"></p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-500 text-slate-300 mb-3">I am a</label>
+            <div class="flex gap-3">
+              <input type="radio" name="role" value="Student" id="role-student" class="role-option" required/>
+              <label for="role-student" class="role-label">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>
+                </svg>
+                <span class="text-sm font-500">Student</span>
+              </label>
+
+              <input type="radio" name="role" value="Interpreter" id="role-interpreter" class="role-option"/>
+              <label for="role-interpreter" class="role-label">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                <span class="text-sm font-500">Interpreter</span>
+              </label>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-primary">Create account</button>
+        </div>
+      </form>
+
+      <p class="text-center text-slate-500 text-sm mt-6">
+        Already have an account?
+        <a href="/login" class="text-cyan-400 font-500 hover:text-cyan-300 transition-colors ml-1">Log in</a>
+      </p>
+    </div>
+
+    <p class="text-center mt-6">
+      <a href="/" class="text-slate-600 text-sm hover:text-slate-400 transition-colors">Back to home</a>
+    </p>
+
+  </div>
+
+  <script>
+    const pw = document.getElementById('password');
+    const cpw = document.getElementById('confirm_password');
+    const msg = document.getElementById('pw-match-msg');
+    cpw.addEventListener('input', () => {
+      if (cpw.value.length === 0) { msg.classList.add('hidden'); return; }
+      msg.classList.remove('hidden');
+      if (pw.value === cpw.value) {
+        msg.textContent = 'Passwords match';
+        msg.style.color = '#6ee7f7';
+      } else {
+        msg.textContent = 'Passwords do not match';
+        msg.style.color = '#fca5a5';
+      }
+    });
+  </script>
+</body>
+</html>

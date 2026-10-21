@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Example of Gestures — SignBridge ISL</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #050810; color: #f8fafc; }
+    .font-display { font-family: 'Syne', sans-serif; }
+    .grid-bg {
+      background-image: linear-gradient(rgba(110,231,247,0.02) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(110,231,247,0.02) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+    .card {
+      background: rgba(10, 15, 30, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 1rem;
+      backdrop-filter: blur(12px);
+      transition: all 0.25s ease;
+    }
+    .card:hover {
+      border-color: rgba(129, 140, 248, 0.35);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(129, 140, 248, 0.08);
+    }
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.65rem 0.85rem;
+      border-radius: 0.6rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #94a3b8;
+      transition: all 0.2s;
+    }
+    .nav-link:hover { color: #f8fafc; background: rgba(255,255,255,0.05); }
+    .nav-link.active {
+      color: #818cf8;
+      background: rgba(129,140,248,0.12);
+      border: 1px solid rgba(129,140,248,0.25);
+    }
+    .cat-pill {
+      padding: 0.35rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #94a3b8;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+    .cat-pill:hover { background: rgba(255, 255, 255, 0.1); color: #f8fafc; }
+    .cat-pill.active {
+      background: rgba(129, 140, 248, 0.2);
+      border-color: rgba(129, 140, 248, 0.5);
+      color: #c7d2fe;
+    }
+    .btn-logout {
+      font-size: 0.8rem;
+      color: #f87171;
+      padding: 0.4rem 0.75rem;
+      border-radius: 0.5rem;
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.2);
+      transition: all 0.2s;
+    }
+    .btn-logout:hover { background: rgba(239,68,68,0.15); }
+    .scrollbar-none::-webkit-scrollbar { display: none; }
+    .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="grid-bg">
+  <div class="flex min-h-screen">
+
+    <!-- SIDEBAR -->
+    <aside class="w-60 border-r border-white/5 flex flex-col py-6 px-4 fixed top-0 left-0 h-full z-20" style="background: rgba(5,8,16,0.95);">
+      <a href="/" class="flex items-center gap-2 mb-8 px-2">
+        <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style="background: linear-gradient(135deg, #6ee7f7, #818cf8);">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#050810" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0m-2 6V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v4"/>
+            <path d="M18 11a2 2 0 0 1 2 2v1a8 8 0 0 1-8 8h-2a8 8 0 0 1-8-8V9a2 2 0 0 1 2-2v0a2 2 0 0 1 2 2"/>
+          </svg>
+        </div>
+        <span class="font-display text-base font-bold text-white">SignBridge</span>
+      </a>
+
+      <nav class="flex flex-col gap-1 flex-1">
+        <a href="/dashboard" class="nav-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Dashboard
+        </a>
+        <a href="/translator" class="nav-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+          ISL Translator
+        </a>
+        <a href="/tutor" class="nav-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          AI Tutor
+        </a>
+        <a href="/profile" class="nav-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Profile
+        </a>
+      </nav>
+
+      <div class="mt-auto px-2">
+        <p class="text-xs text-slate-600 mb-1">Signed in as</p>
+        <p class="text-sm text-slate-300 font-500 truncate mb-3">{{ session.full_name }}</p>
+        <a href="/logout" class="btn-logout w-full text-center block">Log out</a>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="ml-60 flex-1 p-8">
+      
+      <!-- PAGE HEADER -->
+      <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-3">
+            <h1 class="font-display text-2xl font-bold text-white">Example of Gestures</h1>
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-cyan-400/10 text-cyan-300 border border-cyan-400/20">70 Official Signs</span>
+          </div>
+          <p class="text-slate-400 text-sm mt-1">Browse all 70 Indian Sign Language gestures with animated skeleton references and step-by-step hand guidance.</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-xs text-slate-400" id="resultsCount">Showing {{ gestures | length }} gestures</span>
+        </div>
+      </div>
+
+      <!-- FILTER CONTROLS -->
+      <div class="card p-4 mb-6">
+        <div class="flex flex-col md:flex-row gap-3 items-center justify-between">
+          <!-- Search input -->
+          <div class="relative w-full md:w-80">
+            <svg class="absolute left-3 top-2.5 text-slate-500 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input type="text" id="searchInput" placeholder="Search sign (e.g. Doctor, Book, Thank you)..." class="w-full pl-9 pr-3 py-2 text-xs rounded-lg bg-black/40 border border-white/10 text-slate-200 focus:outline-none focus:border-indigo-400/60 transition" oninput="applyFilter()"/>
+          </div>
+
+          <!-- Hands Filter -->
+          <div class="flex gap-2 w-full md:w-auto">
+            <select id="handsFilter" class="px-3 py-2 text-xs rounded-lg bg-black/40 border border-white/10 text-slate-300 focus:outline-none focus:border-indigo-400/60" onchange="applyFilter()">
+              <option value="All">All Hand Types</option>
+              <option value="Single Hand">Single Hand Signs</option>
+              <option value="Both Hands">Both Hands Signs</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Category Pills -->
+        <div class="flex gap-1.5 overflow-x-auto pt-3 mt-2 border-t border-white/5 scrollbar-none" id="catPillsContainer">
+          <button class="cat-pill active" onclick="setCategoryFilter('All', this)">All (70)</button>
+          {% for cat_name, cat_words in categories.items() %}
+          <button class="cat-pill" onclick="setCategoryFilter('{{ cat_name }}', this)">{{ cat_name }} ({{ cat_words | length }})</button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- GESTURES GRID -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" id="gesturesGrid">
+        {% for g in gestures %}
+        <div class="card p-4 flex flex-col justify-between gesture-card"
+             data-word="{{ g.word | lower }}"
+             data-category="{{ g.category }}"
+             data-hands="{{ g.hands }}">
+
+          <!-- Card Header -->
+          <div>
+            <div class="flex items-start justify-between gap-2 mb-2.5">
+              <div>
+                <h3 class="font-display text-base font-bold text-white">{{ g.word }}</h3>
+                <span class="text-[11px] font-medium text-slate-400">{{ g.category }}</span>
+              </div>
+              <span class="px-2 py-0.5 rounded text-[10px] font-semibold {% if g.hands == 'Both Hands' %}bg-purple-500/10 text-purple-300 border border-purple-500/20{% else %}bg-cyan-500/10 text-cyan-300 border border-cyan-500/20{% endif %}">
+                {{ g.hands }}
+              </span>
+            </div>
+
+            <!-- GIF Display Container -->
+            <div class="relative w-full rounded-xl overflow-hidden bg-black/60 border border-white/5 flex items-center justify-center mb-3" style="aspect-ratio: 1/1;">
+              {% if g.gif_url %}
+              <img src="{{ g.gif_url }}" alt="{{ g.word }} gesture animation" class="w-full h-full object-contain p-2" loading="lazy"/>
+              {% else %}
+              <div class="flex flex-col items-center justify-center text-slate-500 text-xs p-4 text-center">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="mb-1"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                <span>Reference gesture</span>
+              </div>
+              {% endif %}
+            </div>
+
+            <!-- Step-by-Step Instructions -->
+            <div class="space-y-1.5 mb-4">
+              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">How to Perform:</p>
+              {% if g.steps %}
+                {% for step in g.steps %}
+                <div class="flex items-start gap-1.5 text-xs text-slate-300">
+                  <span class="text-indigo-400 font-bold mt-0.5">•</span>
+                  <span>{{ step }}</span>
+                </div>
+                {% endfor %}
+              {% else %}
+                <p class="text-xs text-slate-400">{{ g.instructions }}</p>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Practice in Tutor CTA -->
+          <a href="/tutor?word={{ g.word }}" class="w-full py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition text-purple-200 bg-purple-500/15 border border-purple-500/30 hover:bg-purple-500/25">
+            <span>Practice in AI Tutor</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- EMPTY STATE -->
+      <div id="noResults" class="card p-12 text-center hidden">
+        <svg class="w-12 h-12 text-slate-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <h3 class="font-display text-lg font-bold text-white mb-1">No matching gestures found</h3>
+        <p class="text-xs text-slate-400 mb-4">Try searching for a different word or clearing category filters.</p>
+        <button class="px-4 py-2 rounded-lg text-xs font-semibold bg-indigo-600 text-white" onclick="resetFilters()">Reset All Filters</button>
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    let activeCategory = 'All';
+
+    function setCategoryFilter(cat, btn) {
+      activeCategory = cat;
+      document.querySelectorAll('#catPillsContainer .cat-pill').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      applyFilter();
+    }
+
+    function applyFilter() {
+      const q = document.getElementById('searchInput').value.trim().toLowerCase();
+      const hands = document.getElementById('handsFilter').value;
+      const cards = document.querySelectorAll('.gesture-card');
+      let visible = 0;
+
+      cards.forEach(card => {
+        const word = card.getAttribute('data-word') || '';
+        const cat = card.getAttribute('data-category') || '';
+        const h = card.getAttribute('data-hands') || '';
+
+        const matchSearch = !q || word.includes(q);
+        const matchCat = (activeCategory === 'All') || (cat === activeCategory);
+        const matchHands = (hands === 'All') || (h === hands);
+
+        if (matchSearch && matchCat && matchHands) {
+          card.style.display = '';
+          visible++;
+        } else {
+          card.style.display = 'none';
+        }
+      });
+
+      document.getElementById('resultsCount').textContent = `Showing ${visible} of ${cards.length} gestures`;
+      document.getElementById('noResults').classList.toggle('hidden', visible > 0);
+    }
+
+    function resetFilters() {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('handsFilter').value = 'All';
+      setCategoryFilter('All', document.querySelector('#catPillsContainer .cat-pill'));
+    }
+  </script>
+</body>
+</html>

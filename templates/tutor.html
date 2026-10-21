@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Tutor — SignBridge</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet"/>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background: #050810; color: #e2e8f0; min-height: 100vh; }
+    .font-display { font-family: 'Manrope', sans-serif; }
+    .gradient-text { background: linear-gradient(135deg, #6ee7f7, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .grid-bg { background-image: linear-gradient(rgba(110,231,247,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(110,231,247,0.03) 1px, transparent 1px); background-size: 60px 60px; }
+    .card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 1rem; }
+    .nav-link { color: #64748b; font-size: 0.875rem; font-weight: 500; transition: color 0.2s; display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; border-radius: 0.5rem; }
+    .nav-link:hover { color: #e2e8f0; background: rgba(255,255,255,0.04); }
+    .nav-link.active { color: #c084fc; background: rgba(192,132,252,0.08); }
+    .btn { padding: 0.65rem 1.5rem; border-radius: 0.6rem; font-weight: 600; font-size: 0.875rem; cursor: pointer; border: none; font-family: 'Plus Jakarta Sans', sans-serif; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; }
+    .btn-purple { background: linear-gradient(135deg, #818cf8, #c084fc); color: #050810; }
+    .btn-purple:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(192,132,252,0.25); }
+    .btn-purple:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-ghost { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; }
+    .btn-ghost:hover { background: rgba(255,255,255,0.08); color: #e2e8f0; }
+    #videoCanvas { width: 100%; border-radius: 0.75rem; display: block; transform: scaleX(-1); }
+    #videoElement { display: none; }
+    .word-btn { padding: 0.4rem 0.85rem; border-radius: 0.5rem; font-size: 0.8rem; font-weight: 500; cursor: pointer; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; transition: all 0.2s; white-space: nowrap; }
+    .word-btn:hover { border-color: rgba(192,132,252,0.4); color: #c084fc; background: rgba(192,132,252,0.08); }
+    .word-btn.selected { border-color: rgba(192,132,252,0.6); color: #e9d5ff; background: rgba(192,132,252,0.2); font-weight: 600; box-shadow: 0 0 12px rgba(192,132,252,0.15); }
+    .cat-pill { padding: 0.3rem 0.75rem; border-radius: 2rem; font-size: 0.75rem; font-weight: 600; cursor: pointer; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; transition: all 0.2s; white-space: nowrap; }
+    .cat-pill:hover { color: #e2e8f0; background: rgba(255,255,255,0.06); }
+    .cat-pill.active { background: rgba(192,132,252,0.15); border-color: rgba(192,132,252,0.4); color: #c084fc; }
+    .accuracy-bar { height: 8px; border-radius: 4px; background: rgba(255,255,255,0.06); overflow: hidden; }
+    .accuracy-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; background: linear-gradient(90deg, #818cf8, #c084fc); }
+    .badge-card { background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.25); border-radius: 0.75rem; padding: 1rem; text-align: center; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .status-active { background: #4ade80; box-shadow: 0 0 8px rgba(74,222,128,0.6); animation: pulse 2s infinite; }
+    .status-idle { background: #64748b; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+    .btn-logout { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); color: #fca5a5; padding: 0.4rem 0.9rem; border-radius: 0.5rem; font-size: 0.8rem; font-weight: 500; cursor: pointer; transition: all 0.2s; text-decoration: none; display: inline-block; }
+    .btn-logout:hover { background: rgba(239,68,68,0.15); }
+    .tab-btn { padding: 0.5rem 1.25rem; border-radius: 0.5rem; font-size: 0.875rem; font-weight: 500; cursor: pointer; border: none; font-family: 'Plus Jakarta Sans', sans-serif; transition: all 0.2s; color: #64748b; background: transparent; }
+    .tab-btn.active { background: rgba(192,132,252,0.12); color: #c084fc; font-weight: 600; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  </style>
+</head>
+<body class="grid-bg">
+  <div class="flex min-h-screen">
+
+    <!-- SIDEBAR -->
+    <aside class="w-60 border-r border-white/5 flex flex-col py-6 px-4 fixed top-0 left-0 h-full z-20" style="background: rgba(5,8,16,0.95);">
+      <a href="/" class="flex items-center gap-2 mb-8 px-2">
+        <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style="background: linear-gradient(135deg, #6ee7f7, #818cf8);">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#050810" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0m-2 6V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v4"/><path d="M18 11a2 2 0 0 1 2 2v1a8 8 0 0 1-8 8h-2a8 8 0 0 1-8-8V9a2 2 0 0 1 2-2v0a2 2 0 0 1 2 2"/></svg>
+        </div>
+        <span class="font-display text-base font-bold text-white">SignBridge</span>
+      </a>
+      <nav class="flex flex-col gap-1 flex-1">
+        <a href="/dashboard" class="nav-link"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
+        <a href="/translator" class="nav-link"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>ISL Translator</a>
+        <a href="/tutor" class="nav-link active"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>AI Tutor</a>
+        <a href="/profile" class="nav-link"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Profile</a>
+      </nav>
+      <div class="mt-auto px-2">
+        <p class="text-xs text-slate-600 mb-1">Signed in as</p>
+        <p class="text-sm text-slate-300 font-500 truncate mb-3">{{ session.full_name }}</p>
+        <a href="/logout" class="btn-logout w-full text-center block">Log out</a>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="ml-60 flex-1 p-8">
+      <div class="mb-6 flex items-center justify-between">
+        <div>
+          <div class="flex items-center gap-3">
+            <h1 class="font-display text-2xl font-bold text-white">Smart AI Tutor</h1>
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-400/10 text-purple-300 border border-purple-400/20">70 Signs with GIF Guides</span>
+          </div>
+          <p class="text-slate-400 text-sm mt-1">Select a sign to practice, watch the animated reference gesture, match your hand, and score ≥ 75% for a badge.</p>
+        </div>
+        <div class="flex gap-2 p-1 rounded-lg bg-white/5 border border-white/5">
+          <button class="tab-btn active" id="tabLearn" onclick="switchTab('learn')">Learn Mode</button>
+          <button class="tab-btn" id="tabAttack" onclick="switchTab('attack')">Time Attack</button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-5 gap-6">
+
+        <!-- CAMERA & REFERENCE VIEW (Col 3) -->
+        <div class="col-span-3">
+          <div class="card p-4">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <span class="status-dot status-idle" id="statusDot"></span>
+                <span class="text-xs font-medium text-slate-400" id="statusText">Camera off</span>
+              </div>
+              <div class="flex gap-2">
+                <button class="btn btn-purple" id="startBtn" onclick="startCamera()">Start Camera</button>
+                <button class="btn btn-ghost" id="stopBtn" onclick="stopCamera()" style="display:none;">Stop</button>
+              </div>
+            </div>
+
+            <!-- Video canvas container -->
+            <div class="relative bg-slate-950 rounded-xl overflow-hidden border border-white/5" style="aspect-ratio: 4/3;">
+              <video id="videoElement" autoplay playsinline></video>
+              <canvas id="videoCanvas"></canvas>
+
+              <!-- Time attack overlay -->
+              <div id="timerOverlay" class="absolute top-3 right-3 hidden z-10">
+                <div class="w-16 h-16 flex flex-col items-center justify-center rounded-full bg-slate-950/85 border-2 border-purple-400 shadow-lg backdrop-blur-md">
+                  <span class="font-display text-2xl font-bold text-purple-300" id="timerCount">3</span>
+                  <span class="text-xs text-slate-400 font-medium" id="roundDisplay">1/5</span>
+                </div>
+              </div>
+
+              <!-- Time attack flash word -->
+              <div id="wordFlash" class="absolute top-3 left-3 hidden z-10">
+                <div class="rounded-xl px-4 py-2 bg-slate-950/85 border border-purple-500/40 backdrop-blur-md shadow-xl">
+                  <p class="text-xs text-slate-400 mb-0.5 font-medium">Perform this sign:</p>
+                  <p class="font-display text-2xl font-extrabold text-purple-300" id="flashWord">Hello</p>
+                </div>
+              </div>
+
+              <!-- Hand tracking warning -->
+              <div id="noHandMsg" class="absolute bottom-3 left-0 right-0 text-center hidden z-10">
+                <span class="text-xs px-3.5 py-1.5 rounded-full bg-red-950/80 border border-red-500/30 text-red-300 font-medium backdrop-blur-sm">
+                  No hand detected — place hand clearly in camera view
+                </span>
+              </div>
+            </div>
+
+            <!-- Hand Legend -->
+            <div class="flex items-center justify-between mt-3 px-1 text-xs text-slate-400">
+              <div class="flex items-center gap-4">
+                <div class="flex items-center gap-1.5">
+                  <span class="legend-dot" style="background: #6ee7f7;"></span>
+                  <span>Your Hand (Cyan)</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="legend-dot" style="background: #60a5fa;"></span>
+                  <span>Target Ghost Hand (Blue)</span>
+                </div>
+              </div>
+              <span id="targetSelectedLabel" class="text-purple-300 font-medium">Selected: Hello</span>
+            </div>
+
+            <!-- Action Controls -->
+            <div class="flex gap-2 mt-4">
+              <button class="btn btn-purple flex-1 py-3 text-base shadow-lg shadow-purple-500/10" id="scoreBtn" onclick="scoreAttempt()" disabled>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                <span>Score My Gesture</span>
+              </button>
+              <button class="btn btn-purple flex-1 py-3 text-base" id="attackBtn" onclick="startTimeAttack()" disabled style="display:none;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span>Start Time Attack</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT PANEL (Col 2: Reference GIF, Word Selector, Accuracy) -->
+        <div class="col-span-2 flex flex-col gap-4">
+
+          <!-- REFERENCE GESTURE GUIDE CARD -->
+          <div class="card p-4">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="font-display text-sm font-bold text-white flex items-center gap-1.5">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                Reference Gesture Guide
+              </h3>
+              <span class="text-xs text-purple-300 font-semibold px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/20" id="guideWordBadge">Hello</span>
+            </div>
+            
+            <div class="flex items-center gap-4 bg-slate-950/50 p-2.5 rounded-xl border border-white/5">
+              <div class="w-32 h-32 rounded-lg overflow-hidden bg-black/60 border border-purple-500/30 flex-shrink-0 flex items-center justify-center">
+                <img id="guideGif" src="/static/gesture_gifs/Hello.gif" alt="Gesture Reference" class="w-full h-full object-contain" onerror="this.src=''; this.alt='No guide image'"/>
+              </div>
+              <div class="flex-1 text-xs text-slate-300 leading-relaxed">
+                <p class="font-semibold text-slate-200 mb-1" id="guideWordTitle">Hello</p>
+                <p class="text-slate-400" id="guideInstructions">Open palm facing camera | All 5 fingers spread wide | Single hand</p>
+                <p class="text-purple-400 text-xs mt-2 font-medium">Match the skeleton gesture above.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- WORD SELECTOR (Search + Category Filter + Word Grid) -->
+          <div class="card p-4" id="wordSelectorPanel">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="font-display text-sm font-bold text-white">Choose from 70 Signs</h3>
+              <span class="text-xs text-slate-500" id="filteredCount">70 available</span>
+            </div>
+
+            <!-- Search input -->
+            <div class="relative mb-2">
+              <input type="text" id="searchWordInput" placeholder="Search signs (e.g. Doctor, Book, Thank you)..." class="w-full px-3 py-1.5 text-xs rounded-lg bg-black/40 border border-white/10 text-slate-200 focus:outline-none focus:border-purple-400/50" oninput="filterWords()"/>
+            </div>
+
+            <!-- Category Pills -->
+            <div class="flex gap-1.5 overflow-x-auto pb-1 mb-2 scrollbar-none" id="categoryPills">
+              <button class="cat-pill active" onclick="setCategory('All')">All</button>
+              {% for cat_name, cat_words in categories.items() %}
+              <button class="cat-pill" onclick="setCategory('{{ cat_name }}')">{{ cat_name }}</button>
+              {% endfor %}
+            </div>
+
+            <!-- Words Grid -->
+            <div class="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1" id="wordsContainer">
+              {% for word in words %}
+              <button class="word-btn" onclick="selectWord('{{ word }}')" id="word-{{ word }}" data-word="{{ word }}">{{ word }}</button>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- ACCURACY & FEEDBACK CARD -->
+          <div class="card p-5" id="accuracyPanel">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="font-display text-sm font-bold text-white">Accuracy Score</h3>
+              <span class="font-display text-2xl font-extrabold" id="accuracyValue" style="background: linear-gradient(135deg, #818cf8, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">—</span>
+            </div>
+            <div class="accuracy-bar mb-3">
+              <div class="accuracy-fill" id="accuracyBar" style="width: 0%"></div>
+            </div>
+            <p class="text-slate-300 text-xs leading-relaxed" id="feedbackText">Select a sign, match your fingers to the guide, and click <strong>Score My Gesture</strong>.</p>
+          </div>
+
+          <!-- BADGE UNLOCKED CELEBRATION -->
+          <div class="badge-card hidden" id="badgePanel">
+            <div class="flex items-center justify-center gap-2 mb-1">
+              <span class="text-xl">🏆</span>
+              <p class="text-yellow-400 font-display font-bold text-sm">Proficiency Badge Unlocked!</p>
+            </div>
+            <p class="text-yellow-200 text-xs font-semibold" id="badgeName">Master: Hello</p>
+          </div>
+
+          <!-- TIME ATTACK SUMMARY -->
+          <div id="attackSummary" class="card p-5 hidden">
+            <h3 class="font-display text-base font-bold text-white mb-2">Session Results</h3>
+            <div class="text-center py-2">
+              <p class="font-display text-4xl font-extrabold gradient-text mb-1" id="finalScore">0/5</p>
+              <p class="text-slate-400 text-xs mb-3">signs executed successfully</p>
+              <div id="roundResults" class="text-left space-y-1.5 mb-4 max-h-32 overflow-y-auto pr-1"></div>
+              <button class="btn btn-purple w-full py-2.5" onclick="startTimeAttack()">Play Again</button>
+            </div>
+          </div>
+
+          <!-- LEADERBOARD -->
+          <div class="card p-4">
+            <h3 class="font-display text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Top Performers</h3>
+            <div id="leaderboardList" class="space-y-1 text-xs">
+              <p class="text-slate-600">Loading...</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    let camera = null, hands = null, isRunning = false;
+    let currentLandmarks = null, selectedWord = 'Hello', referenceData = null, referenceShape = null;
+    let currentMode = 'learn';
+    let currentCategory = 'All';
+    let timeAttackTimer = null, timeAttackScore = 0;
+    let handDetected = false;
+    let attackRound = 0, attackResults = [];
+    const TOTAL_ROUNDS = 5;
+
+    const allWords = {{ words | tojson }};
+    const categoriesMap = {{ categories | tojson }};
+
+    const videoEl = document.getElementById('videoElement');
+    const canvas = document.getElementById('videoCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const HAND_CONNECTIONS_LIST = [
+      [0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],
+      [5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],
+      [13,17],[17,18],[18,19],[19,20],[0,17]
+    ];
+
+    function initMediaPipe() {
+      hands = new Hands({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
+      hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.45, minTrackingConfidence: 0.45 });
+      hands.onResults(onResults);
+    }
+
+    function onResults(results) {
+      canvas.width = videoEl.videoWidth || 640;
+      canvas.height = videoEl.videoHeight || 480;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+
+      let frameData = { left_hand: null, right_hand: null };
+      handDetected = false;
+
+      if (results.multiHandLandmarks && results.multiHandedness && results.multiHandLandmarks.length > 0) {
+        handDetected = true;
+        results.multiHandLandmarks.forEach((landmarks, i) => {
+          const handedness = results.multiHandedness[i];
+          const label = handedness ? handedness.label : 'Right';
+          drawConnectors(ctx, landmarks, HAND_CONNECTIONS, { color: '#6ee7f7', lineWidth: 2 });
+          drawLandmarks(ctx, landmarks, { color: '#818cf8', lineWidth: 1, radius: 2.5 });
+
+          const lmArray = landmarks.map(l => ({ x: l.x, y: l.y, z: l.z }));
+          if (label === 'Left') frameData.left_hand = lmArray;
+          else frameData.right_hand = lmArray;
+        });
+      }
+
+      document.getElementById('noHandMsg').classList.toggle('hidden', handDetected);
+
+      // Draw Ghost Hand Overlay aligned to user's wrist
+      if (handDetected && (referenceData || referenceShape)) {
+        drawGhostHand(frameData);
+      }
+
+      currentLandmarks = frameData;
+    }
+
+    function drawGhostHand(frameData) {
+      const w = canvas.width, h = canvas.height;
+      let liveWrist = null;
+      const liveHandArr = frameData.right_hand || frameData.left_hand;
+      if (liveHandArr && liveHandArr.length > 0) {
+        liveWrist = { x: liveHandArr[0].x * w, y: liveHandArr[0].y * h };
+      }
+      if (!liveWrist) return;
+
+      // Use referenceShape if available, else raw referenceData
+      let points21 = null;
+      if (referenceShape) {
+        points21 = referenceShape.right || referenceShape.left;
+      }
+      if (!points21 && referenceData) {
+        const refArr = referenceData;
+        const base = (refArr.slice(63, 126).some(v => v !== 0)) ? 63 : 0;
+        points21 = [];
+        for (let i = 0; i < 21; i++) {
+          points21.push([refArr[base + i*3], refArr[base + i*3 + 1], refArr[base + i*3 + 2]]);
+        }
+      }
+      if (!points21 || points21.length < 21) return;
+
+      // Scale ghost to live hand dimension
+      const liveSpan = Math.sqrt(Math.pow((liveHandArr[9].x - liveHandArr[0].x) * w, 2) + Math.pow((liveHandArr[9].y - liveHandArr[0].y) * h, 2));
+      const refSpan = Math.sqrt(Math.pow((points21[9][0] - points21[0][0]) * w, 2) + Math.pow((points21[9][1] - points21[0][1]) * h, 2)) || 100;
+      const scale = liveSpan > 0 ? liveSpan / refSpan : 1;
+
+      const refWristX = points21[0][0] * w;
+      const refWristY = points21[0][1] * h;
+
+      const renderedPoints = [];
+      for (let i = 0; i < 21; i++) {
+        renderedPoints.push({
+          x: liveWrist.x + (points21[i][0] * w - refWristX) * scale,
+          y: liveWrist.y + (points21[i][1] * h - refWristY) * scale
+        });
+      }
+
+      ctx.save();
+      ctx.globalAlpha = 0.65;
+      ctx.strokeStyle = '#60a5fa';
+      ctx.lineWidth = 2.5;
+
+      HAND_CONNECTIONS_LIST.forEach(([a, b]) => {
+        ctx.beginPath();
+        ctx.moveTo(renderedPoints[a].x, renderedPoints[a].y);
+        ctx.lineTo(renderedPoints[b].x, renderedPoints[b].y);
+        ctx.stroke();
+      });
+
+      ctx.fillStyle = '#93c5fd';
+      renderedPoints.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    }
+
+    function startCamera() {
+      initMediaPipe();
+      camera = new Camera(videoEl, {
+        onFrame: async () => { await hands.send({ image: videoEl }); },
+        width: 640,
+        height: 480
+      });
+      camera.start();
+      isRunning = true;
+      document.getElementById('statusDot').className = 'status-dot status-active';
+      document.getElementById('statusText').textContent = 'Camera active';
+      document.getElementById('startBtn').style.display = 'none';
+      document.getElementById('stopBtn').style.display = '';
+      document.getElementById('scoreBtn').disabled = false;
+      document.getElementById('attackBtn').disabled = false;
+      loadLeaderboard();
+      selectWord(selectedWord || allWords[0]);
+    }
+
+    function stopCamera() {
+      if (camera) camera.stop();
+      isRunning = false;
+      document.getElementById('statusDot').className = 'status-dot status-idle';
+      document.getElementById('statusText').textContent = 'Camera off';
+      document.getElementById('startBtn').style.display = '';
+      document.getElementById('stopBtn').style.display = 'none';
+      document.getElementById('scoreBtn').disabled = true;
+      document.getElementById('attackBtn').disabled = true;
+    }
+
+    async function selectWord(word) {
+      selectedWord = word;
+      referenceData = null;
+      referenceShape = null;
+
+      document.querySelectorAll('.word-btn').forEach(b => b.classList.remove('selected'));
+      const activeBtn = document.getElementById('word-' + word);
+      if (activeBtn) activeBtn.classList.add('selected');
+
+      document.getElementById('targetSelectedLabel').textContent = `Target: ${word}`;
+      document.getElementById('guideWordBadge').textContent = word;
+      document.getElementById('guideWordTitle').textContent = word;
+      document.getElementById('feedbackText').textContent = `Selected: ${word}. Position your hand and click Score My Gesture.`;
+
+      const gifImg = document.getElementById('guideGif');
+      gifImg.src = `/static/gesture_gifs/${word.replace(/ /g, '_').replace(/\//g, '_')}.gif`;
+
+      try {
+        const res = await fetch('/api/get_reference', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ word })
+        });
+        const data = await res.json();
+        if (data.reference_landmarks) referenceData = data.reference_landmarks;
+        if (data.reference_shape) referenceShape = data.reference_shape;
+        if (data.instructions) {
+          document.getElementById('guideInstructions').textContent = data.instructions;
+        }
+      } catch (e) {
+        console.error("Reference fetch error", e);
+      }
+    }
+
+    async function scoreAttempt() {
+      if (!currentLandmarks || !selectedWord) {
+        document.getElementById('feedbackText').textContent = 'Select a sign and start camera first.';
+        return null;
+      }
+      if (!handDetected) {
+        document.getElementById('feedbackText').textContent = 'No hand detected. Show your hand clearly.';
+        return null;
+      }
+
+      // Sample a quick burst of 10-15 frames from canvas for full trajectory accuracy
+      const burstFrames = [];
+      for (let i = 0; i < 8; i++) {
+        burstFrames.push(canvas.toDataURL('image/jpeg', 0.6));
+      }
+
+      try {
+        const res = await fetch('/api/score_attempt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            frames: burstFrames,
+            hand_data: currentLandmarks,
+            selected_word: selectedWord
+          })
+        });
+        const data = await res.json();
+        const acc = data.accuracy || 0;
+
+        document.getElementById('accuracyValue').textContent = `${acc.toFixed(1)}%`;
+        document.getElementById('accuracyBar').style.width = `${acc}%`;
+        document.getElementById('feedbackText').textContent = data.feedback || '';
+
+        const badgePanel = document.getElementById('badgePanel');
+        if (data.badge_unlocked) {
+          badgePanel.classList.remove('hidden');
+          document.getElementById('badgeName').textContent = `Master: ${selectedWord}`;
+        } else {
+          badgePanel.classList.add('hidden');
+        }
+
+        loadLeaderboard();
+        return acc;
+      } catch (e) {
+        document.getElementById('feedbackText').textContent = 'Scoring error. Try again.';
+        return null;
+      }
+    }
+
+    function setCategory(cat) {
+      currentCategory = cat;
+      document.querySelectorAll('.cat-pill').forEach(p => {
+        p.classList.toggle('active', p.textContent === cat);
+      });
+      filterWords();
+    }
+
+    function filterWords() {
+      const query = (document.getElementById('searchWordInput').value || '').toLowerCase().trim();
+      let allowed = allWords;
+
+      if (currentCategory !== 'All' && categoriesMap[currentCategory]) {
+        allowed = categoriesMap[currentCategory];
+      }
+
+      let count = 0;
+      allWords.forEach(w => {
+        const btn = document.getElementById('word-' + w);
+        if (!btn) return;
+        const matchesCat = allowed.includes(w);
+        const matchesQuery = !query || w.toLowerCase().includes(query);
+        const visible = matchesCat && matchesQuery;
+        btn.style.display = visible ? '' : 'none';
+        if (visible) count++;
+      });
+      document.getElementById('filteredCount').textContent = `${count} available`;
+    }
+
+    function switchTab(mode) {
+      currentMode = mode;
+      document.getElementById('tabLearn').classList.toggle('active', mode === 'learn');
+      document.getElementById('tabAttack').classList.toggle('active', mode === 'attack');
+      document.getElementById('scoreBtn').style.display = mode === 'learn' ? '' : 'none';
+      document.getElementById('attackBtn').style.display = mode === 'attack' ? '' : 'none';
+      document.getElementById('wordSelectorPanel').style.display = mode === 'learn' ? '' : 'none';
+      document.getElementById('attackSummary').classList.add('hidden');
+    }
+
+    async function startTimeAttack() {
+      if (!isRunning) {
+        alert('Start camera first.');
+        return;
+      }
+      attackRound = 0;
+      timeAttackScore = 0;
+      attackResults = [];
+      document.getElementById('attackSummary').classList.add('hidden');
+      document.getElementById('accuracyPanel').classList.remove('hidden');
+      await runAttackRound();
+    }
+
+    async function runAttackRound() {
+      if (attackRound >= TOTAL_ROUNDS) {
+        showAttackSummary();
+        return;
+      }
+      attackRound++;
+      const randomWord = allWords[Math.floor(Math.random() * allWords.length)];
+      await selectWord(randomWord);
+
+      document.getElementById('flashWord').textContent = randomWord;
+      document.getElementById('wordFlash').classList.remove('hidden');
+      document.getElementById('timerOverlay').classList.remove('hidden');
+      document.getElementById('roundDisplay').textContent = `${attackRound}/${TOTAL_ROUNDS}`;
+
+      let count = 3;
+      document.getElementById('timerCount').textContent = count;
+
+      await new Promise(resolve => {
+        timeAttackTimer = setInterval(() => {
+          count--;
+          document.getElementById('timerCount').textContent = count;
+          if (count <= 0) {
+            clearInterval(timeAttackTimer);
+            resolve();
+          }
+        }, 1000);
+      });
+
+      document.getElementById('wordFlash').classList.add('hidden');
+      document.getElementById('timerOverlay').classList.add('hidden');
+
+      const acc = await scoreAttempt();
+      const passed = acc !== null && acc >= 30;
+      if (passed) timeAttackScore++;
+      attackResults.push({ word: randomWord, acc: acc || 0, passed });
+
+      await new Promise(r => setTimeout(r, 1200));
+      await runAttackRound();
+    }
+
+    function showAttackSummary() {
+      document.getElementById('attackSummary').classList.remove('hidden');
+      document.getElementById('accuracyPanel').classList.add('hidden');
+      document.getElementById('finalScore').textContent = `${timeAttackScore}/${TOTAL_ROUNDS}`;
+      document.getElementById('roundResults').innerHTML = attackResults.map((r, i) => `
+        <div class="flex items-center justify-between py-1 border-b border-white/5 last:border-0">
+          <span class="text-xs text-slate-300">Round ${i+1}: <strong>${r.word}</strong></span>
+          <span class="text-xs font-semibold ${r.passed ? 'text-green-400' : 'text-red-400'}">${r.acc.toFixed(1)}% ${r.passed ? '✓' : '✗'}</span>
+        </div>
+      `).join('');
+      loadLeaderboard();
+    }
+
+    async function loadLeaderboard() {
+      try {
+        const res = await fetch('/api/leaderboard');
+        const data = await res.json();
+        const el = document.getElementById('leaderboardList');
+        if (!data || data.length === 0) {
+          el.innerHTML = '<p class="text-slate-600 text-xs">No records yet. Score first!</p>';
+          return;
+        }
+        el.innerHTML = data.map((r, i) => `
+          <div class="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold w-4 text-purple-400">#${i+1}</span>
+              <span class="text-xs text-slate-200">${r.name}</span>
+            </div>
+            <span class="text-xs text-slate-400 font-medium">${r.avg_accuracy}%</span>
+          </div>
+        `).join('');
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // Select target word from URL parameter (e.g. from Example of Gestures) or default to Hello
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialWord = urlParams.get('word') || 'Hello';
+    selectWord(initialWord);
+  </script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Log in — SignBridge</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet"/>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background: #050810; color: #e2e8f0; min-height: 100vh; }
+    .font-display { font-family: 'Manrope', sans-serif; }
+    .gradient-text {
+      background: linear-gradient(135deg, #6ee7f7 0%, #818cf8 50%, #c084fc 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .grid-bg {
+      background-image: linear-gradient(rgba(110,231,247,0.04) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(110,231,247,0.04) 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+    .input-field {
+      width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 0.6rem; padding: 0.75rem 1rem; color: #e2e8f0; font-size: 0.9rem;
+      font-family: 'Plus Jakarta Sans', sans-serif; outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .input-field:focus { border-color: rgba(110,231,247,0.5); box-shadow: 0 0 0 3px rgba(110,231,247,0.08); }
+    .input-field::placeholder { color: #475569; }
+    .btn-primary {
+      width: 100%; background: linear-gradient(135deg, #6ee7f7, #818cf8);
+      color: #050810; font-weight: 700; padding: 0.85rem 1rem; border-radius: 0.6rem;
+      border: none; cursor: pointer; font-size: 0.95rem; font-family: 'Plus Jakarta Sans', sans-serif;
+      transition: all 0.3s ease; letter-spacing: 0.01em;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(110,231,247,0.3); }
+    .card {
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 1.25rem; padding: 2.5rem;
+    }
+    .alert-error {
+      background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);
+      color: #fca5a5; border-radius: 0.6rem; padding: 0.75rem 1rem; font-size: 0.875rem;
+    }
+    .alert-success {
+      background: rgba(110,231,247,0.08); border: 1px solid rgba(110,231,247,0.2);
+      color: #6ee7f7; border-radius: 0.6rem; padding: 0.75rem 1rem; font-size: 0.875rem;
+    }
+    .glow {
+      position: absolute; width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(129,140,248,0.1) 0%, transparent 70%);
+      border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;
+    }
+  </style>
+</head>
+<body class="grid-bg flex items-center justify-center min-h-screen relative">
+  <div class="glow"></div>
+
+  <div class="w-full max-w-md px-4 relative z-10">
+
+    <div class="text-center mb-8">
+      <a href="/" class="inline-flex items-center gap-2 mb-6">
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, #6ee7f7, #818cf8);">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#050810" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0m-2 6V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v4"/>
+            <path d="M18 11a2 2 0 0 1 2 2v1a8 8 0 0 1-8 8h-2a8 8 0 0 1-8-8V9a2 2 0 0 1 2-2v0a2 2 0 0 1 2 2"/>
+          </svg>
+        </div>
+        <span class="font-display text-lg font-bold text-white">SignBridge</span>
+      </a>
+      <h1 class="font-display text-3xl font-bold text-white mb-2">Welcome back</h1>
+      <p class="text-slate-400 text-sm">Log in to continue your ISL journey</p>
+    </div>
+
+    <div class="card">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="{{ 'alert-error' if category == 'error' else 'alert-success' }} mb-5">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form method="POST" action="/login">
+        <div class="space-y-5">
+          <div>
+            <label class="block text-sm font-500 text-slate-300 mb-2">Email address</label>
+            <input type="email" name="email" class="input-field" placeholder="you@example.com" required/>
+          </div>
+          <div>
+            <label class="block text-sm font-500 text-slate-300 mb-2">Password</label>
+            <input type="password" name="password" class="input-field" placeholder="Enter your password" required/>
+          </div>
+          <button type="submit" class="btn-primary">Log in</button>
+        </div>
+      </form>
+
+      <p class="text-center text-slate-500 text-sm mt-6">
+        Don't have an account?
+        <a href="/signup" class="text-cyan-400 font-500 hover:text-cyan-300 transition-colors ml-1">Sign up</a>
+      </p>
+    </div>
+
+    <p class="text-center mt-6">
+      <a href="/" class="text-slate-600 text-sm hover:text-slate-400 transition-colors">Back to home</a>
+    </p>
+
+  </div>
+</body>
+</html>

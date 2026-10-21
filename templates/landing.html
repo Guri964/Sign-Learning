@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SignBridge — Indian Sign Language AI Platform</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet"/>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background: #050810; color: #e2e8f0; overflow-x: hidden; }
+
+    .font-display { font-family: 'Manrope', sans-serif; }
+
+    .gradient-text {
+      background: linear-gradient(135deg, #6ee7f7 0%, #818cf8 50%, #c084fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .glow-border {
+      border: 1px solid rgba(110, 231, 247, 0.2);
+      box-shadow: 0 0 30px rgba(110, 231, 247, 0.05), inset 0 0 30px rgba(110, 231, 247, 0.02);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #6ee7f7, #818cf8);
+      color: #050810;
+      font-weight: 600;
+      padding: 0.75rem 2rem;
+      border-radius: 0.5rem;
+      transition: all 0.3s ease;
+      display: inline-block;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(110, 231, 247, 0.35);
+    }
+
+    .btn-outline {
+      border: 1px solid rgba(110, 231, 247, 0.4);
+      color: #6ee7f7;
+      font-weight: 500;
+      padding: 0.75rem 2rem;
+      border-radius: 0.5rem;
+      transition: all 0.3s ease;
+      display: inline-block;
+    }
+    .btn-outline:hover {
+      background: rgba(110, 231, 247, 0.08);
+      border-color: #6ee7f7;
+      transform: translateY(-2px);
+    }
+
+    .nav-link {
+      color: #94a3b8;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .nav-link:hover { color: #e2e8f0; }
+
+    .card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 1rem;
+      transition: all 0.3s ease;
+    }
+    .card:hover {
+      background: rgba(255,255,255,0.05);
+      border-color: rgba(110, 231, 247, 0.2);
+      transform: translateY(-4px);
+    }
+
+    .grid-bg {
+      background-image: linear-gradient(rgba(110,231,247,0.04) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(110,231,247,0.04) 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+
+    .hero-glow {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(129,140,248,0.12) 0%, transparent 70%);
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    .hand-animation {
+      animation: float 4s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-16px); }
+    }
+
+    .stat-card {
+      background: linear-gradient(135deg, rgba(110,231,247,0.07), rgba(129,140,248,0.07));
+      border: 1px solid rgba(110,231,247,0.15);
+      border-radius: 1rem;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    .step-line {
+      position: absolute;
+      top: 2rem;
+      left: calc(50% + 2rem);
+      width: calc(100% - 4rem);
+      height: 1px;
+      background: linear-gradient(90deg, rgba(110,231,247,0.3), transparent);
+    }
+
+    .tag {
+      display: inline-block;
+      background: rgba(110,231,247,0.1);
+      border: 1px solid rgba(110,231,247,0.2);
+      color: #6ee7f7;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 0.3rem 0.8rem;
+      border-radius: 2rem;
+    }
+
+    .fade-in {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #050810; }
+    ::-webkit-scrollbar-thumb { background: rgba(110,231,247,0.2); border-radius: 3px; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .hand-animation { animation: none; }
+      .fade-in { opacity: 1; transform: none; }
+    }
+  </style>
+</head>
+<body class="grid-bg">
+
+  <!-- NAV -->
+  <nav class="fixed top-0 left-0 right-0 z-50 border-b border-white/5" style="background: rgba(5,8,16,0.85); backdrop-filter: blur(16px);">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, #6ee7f7, #818cf8);">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#050810" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0m-2 6V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v4"/>
+            <path d="M18 11a2 2 0 0 1 2 2v1a8 8 0 0 1-8 8h-2a8 8 0 0 1-8-8V9a2 2 0 0 1 2-2v0a2 2 0 0 1 2 2"/>
+          </svg>
+        </div>
+        <span class="font-display text-lg font-bold tracking-tight text-white">SignBridge</span>
+      </div>
+      <div class="hidden md:flex items-center gap-8">
+        <a href="#about" class="nav-link">About</a>
+        <a href="#modules" class="nav-link">Modules</a>
+        <a href="#how-it-works" class="nav-link">How it works</a>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="/login" class="btn-outline text-sm py-2 px-4">Log in</a>
+        <a href="/signup" class="btn-primary text-sm py-2 px-4">Sign up</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden">
+    <div class="hero-glow"></div>
+    <div class="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-16 items-center py-20">
+      <div class="fade-in">
+        <span class="tag mb-6 block">AI-Powered Sign Language</span>
+        <h1 class="font-display text-5xl md:text-6xl font-extrabold leading-tight text-white mb-6">
+          Learn and translate
+          <span class="gradient-text block">Indian Sign Language</span>
+          with AI
+        </h1>
+        <p class="text-slate-400 text-lg leading-relaxed mb-10 max-w-md">
+          SignBridge uses deep learning and real-time hand tracking to help you translate ISL gestures and learn signs with live accuracy feedback.
+        </p>
+        <div class="flex items-center gap-4 flex-wrap">
+          <a href="/signup" class="btn-primary">Get started</a>
+          <a href="#modules" class="btn-outline">See how it works</a>
+        </div>
+      </div>
+
+      <div class="flex justify-center fade-in" style="transition-delay: 0.2s;">
+        <div class="hand-animation relative">
+          <div class="w-72 h-72 rounded-2xl glow-border flex items-center justify-center relative overflow-hidden"
+               style="background: linear-gradient(135deg, rgba(110,231,247,0.06), rgba(129,140,248,0.06));">
+            <svg width="140" height="140" viewBox="0 0 24 24" fill="none" stroke="url(#handGrad)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+              <defs>
+                <linearGradient id="handGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#6ee7f7"/>
+                  <stop offset="100%" stop-color="#c084fc"/>
+                </linearGradient>
+              </defs>
+              <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0m-2 6V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v4"/>
+              <path d="M18 11a2 2 0 0 1 2 2v1a8 8 0 0 1-8 8h-2a8 8 0 0 1-8-8V9a2 2 0 0 1 2-2v0a2 2 0 0 1 2 2"/>
+            </svg>
+            <div class="absolute bottom-4 left-4 right-4">
+              <div class="h-1 rounded-full overflow-hidden" style="background: rgba(255,255,255,0.05);">
+                <div class="h-full rounded-full" style="width: 82%; background: linear-gradient(90deg, #6ee7f7, #818cf8);"></div>
+              </div>
+              <p class="text-xs text-slate-500 mt-2 text-center">Accuracy: 82%</p>
+            </div>
+          </div>
+          <div class="absolute -top-3 -right-3 w-6 h-6 rounded-full" style="background: linear-gradient(135deg, #6ee7f7, #818cf8); box-shadow: 0 0 20px rgba(110,231,247,0.5);"></div>
+          <div class="absolute -bottom-2 -left-2 w-4 h-4 rounded-full" style="background: rgba(192,132,252,0.6); box-shadow: 0 0 15px rgba(192,132,252,0.4);"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <section class="py-16 fade-in" id="about">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="stat-card">
+          <p class="font-display text-4xl font-bold gradient-text">70</p>
+          <p class="text-slate-400 text-sm mt-1">ISL word classes</p>
+        </div>
+        <div class="stat-card">
+          <p class="font-display text-4xl font-bold gradient-text">98%</p>
+          <p class="text-slate-400 text-sm mt-1">Sequence Accuracy</p>
+        </div>
+        <div class="stat-card">
+          <p class="font-display text-4xl font-bold gradient-text">85%+</p>
+          <p class="text-slate-400 text-sm mt-1">Tutor Proficiency</p>
+        </div>
+        <div class="stat-card">
+          <p class="font-display text-4xl font-bold gradient-text">9</p>
+          <p class="text-slate-400 text-sm mt-1">Languages Supported</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MODULES -->
+  <section class="py-24 fade-in" id="modules">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="text-center mb-16">
+        <span class="tag mb-4 block mx-auto w-fit">Two powerful modules</span>
+        <h2 class="font-display text-4xl font-bold text-white">Built for learning and communication</h2>
+        <p class="text-slate-400 mt-4 max-w-xl mx-auto">Each module is purpose-built — one to translate what you sign, one to teach you how to sign it correctly.</p>
+      </div>
+      <div class="grid md:grid-cols-2 gap-6">
+
+        <div class="card p-8">
+          <div class="w-12 h-12 rounded-xl mb-6 flex items-center justify-center" style="background: rgba(110,231,247,0.1); border: 1px solid rgba(110,231,247,0.2);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6ee7f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+            </svg>
+          </div>
+          <span class="tag mb-3 block w-fit" style="color: #6ee7f7; border-color: rgba(110,231,247,0.3);">Module 1</span>
+          <h3 class="font-display text-2xl font-bold text-white mb-3">ISL Translator</h3>
+          <p class="text-slate-400 leading-relaxed mb-6">Sign words in front of your webcam. The system captures your hand movements in real time, predicts each word using an LSTM model, builds them into a sentence, translates it, and reads it aloud.</p>
+          <ul class="space-y-2 text-sm text-slate-400">
+            <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-cyan-400 flex-shrink-0"></span> Real-time hand landmark detection</li>
+            <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-cyan-400 flex-shrink-0"></span> LSTM sequence prediction</li>
+            <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-cyan-400 flex-shrink-0"></span> Hindi, Kannada, English translation</li>
+            <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-cyan-400 flex-shrink-0"></span> Audio output via text-to-speech</li>
+          </ul>
+        </div>
+
+        <div class="card p-8">
+          <div class="w-12 h-12 rounded-xl mb-6 flex items-center justify-center" style="background: rgba(192,132,252,0.1); border: 1px solid rgba(192,132,252,0.2);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+            </svg>
+          </div>
+          <span class="tag mb-3 block w-fit" style="color: #c084fc; border-color: rgba(192,132,252,0.3);">Module 2</span>
+          <h3 class="font-display text-2xl font-bold text-white mb-3">Smart AI Tutor</h3>
+          <p class="text-slate-400 leading-relaxed mb-6">Select a word to learn. A ghost hand overlay shows you the correct finger positions. Attempt the sign and get live accuracy feedback. Earn badges when your accuracy crosses 90%.</p>
+          <ul class="space-y-2 text-sm text-slate-400">
+            <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0"></span> Ghost hand overlay guidance</li>
+            <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0"></span> MLP-based accuracy scoring</li>
+            <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0"></span> Finger-level feedback</li>
+            <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0"></span> Time Attack gamified mode</li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="py-24 fade-in" id="how-it-works">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="text-center mb-16">
+        <span class="tag mb-4 block mx-auto w-fit">The pipeline</span>
+        <h2 class="font-display text-4xl font-bold text-white">From gesture to meaning</h2>
+        <p class="text-slate-400 mt-4 max-w-xl mx-auto">Every gesture goes through a four-stage pipeline powered by MediaPipe and deep learning models trained on ISL data.</p>
+      </div>
+      <div class="grid md:grid-cols-4 gap-4">
+        <div class="card p-6 text-center">
+          <div class="w-10 h-10 rounded-xl mx-auto mb-4 flex items-center justify-center text-sm font-bold" style="background: rgba(110,231,247,0.1); border: 1px solid rgba(110,231,247,0.2); color: #6ee7f7;">01</div>
+          <h4 class="text-white font-semibold mb-2">Webcam capture</h4>
+          <p class="text-slate-500 text-sm">Browser streams your live video feed at 30fps using the webcam API.</p>
+        </div>
+        <div class="card p-6 text-center">
+          <div class="w-10 h-10 rounded-xl mx-auto mb-4 flex items-center justify-center text-sm font-bold" style="background: rgba(110,231,247,0.1); border: 1px solid rgba(110,231,247,0.2); color: #6ee7f7;">02</div>
+          <h4 class="text-white font-semibold mb-2">Landmark extraction</h4>
+          <p class="text-slate-500 text-sm">MediaPipe detects 21 hand landmarks per hand — 126 coordinates per frame.</p>
+        </div>
+        <div class="card p-6 text-center">
+          <div class="w-10 h-10 rounded-xl mx-auto mb-4 flex items-center justify-center text-sm font-bold" style="background: rgba(129,140,248,0.1); border: 1px solid rgba(129,140,248,0.2); color: #818cf8;">03</div>
+          <h4 class="text-white font-semibold mb-2">Model prediction</h4>
+          <p class="text-slate-500 text-sm">Sequences are sent to the Flask backend where LSTM or MLP predicts the sign.</p>
+        </div>
+        <div class="card p-6 text-center">
+          <div class="w-10 h-10 rounded-xl mx-auto mb-4 flex items-center justify-center text-sm font-bold" style="background: rgba(192,132,252,0.1); border: 1px solid rgba(192,132,252,0.2); color: #c084fc;">04</div>
+          <h4 class="text-white font-semibold mb-2">Output delivery</h4>
+          <p class="text-slate-500 text-sm">Translated text appears on screen with audio playback in your chosen language.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="py-24 fade-in">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="rounded-2xl p-12 text-center glow-border" style="background: linear-gradient(135deg, rgba(110,231,247,0.05), rgba(192,132,252,0.05));">
+        <h2 class="font-display text-4xl font-bold text-white mb-4">Start learning ISL today</h2>
+        <p class="text-slate-400 max-w-lg mx-auto mb-8">Create a free account to access both modules, track your progress, and earn badges as you build your signing vocabulary.</p>
+        <div class="flex items-center justify-center gap-4 flex-wrap">
+          <a href="/signup" class="btn-primary">Create account</a>
+          <a href="/login" class="btn-outline">Log in</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-white/5 py-10">
+    <div class="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-2">
+        <div class="w-6 h-6 rounded flex items-center justify-center" style="background: linear-gradient(135deg, #6ee7f7, #818cf8);">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#050810" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0m-2 6V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v4"/>
+            <path d="M18 11a2 2 0 0 1 2 2v1a8 8 0 0 1-8 8h-2a8 8 0 0 1-8-8V9a2 2 0 0 1 2-2v0a2 2 0 0 1 2 2"/>
+          </svg>
+        </div>
+        <span class="text-sm font-semibold text-white">SignBridge</span>
+      </div>
+      <p class="text-slate-600 text-sm">Indian Sign Language AI Platform — built with MediaPipe and TensorFlow</p>
+      <div class="flex gap-6">
+        <a href="/login" class="text-slate-500 text-sm hover:text-slate-300 transition-colors">Log in</a>
+        <a href="/signup" class="text-slate-500 text-sm hover:text-slate-300 transition-colors">Sign up</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ISL Translator — SignBridge</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet"/>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background: #050810; color: #e2e8f0; min-height: 100vh; }
+    .font-display { font-family: 'Manrope', sans-serif; }
+    .gradient-text { background: linear-gradient(135deg, #6ee7f7, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .grid-bg { background-image: linear-gradient(rgba(110,231,247,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(110,231,247,0.03) 1px, transparent 1px); background-size: 60px 60px; }
+    .card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 1rem; }
+    .nav-link { color: #64748b; font-size: 0.875rem; font-weight: 500; transition: color 0.2s; display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; border-radius: 0.5rem; }
+    .nav-link:hover { color: #e2e8f0; background: rgba(255,255,255,0.04); }
+    .nav-link.active { color: #6ee7f7; background: rgba(110,231,247,0.08); }
+    #videoCanvas { width: 100%; border-radius: 0.75rem; display: block; transform: scaleX(-1); }
+    #videoElement { display: none; }
+    .btn { padding: 0.65rem 1.5rem; border-radius: 0.6rem; font-weight: 600; font-size: 0.875rem; cursor: pointer; border: none; font-family: 'Plus Jakarta Sans', sans-serif; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; }
+    .btn-cyan { background: linear-gradient(135deg, #6ee7f7, #818cf8); color: #050810; }
+    .btn-cyan:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(110,231,247,0.25); }
+    .btn-cyan:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-danger { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; }
+    .btn-danger:hover { background: rgba(239,68,68,0.25); }
+    .btn-ghost { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; }
+    .btn-ghost:hover { background: rgba(255,255,255,0.08); color: #e2e8f0; }
+    .word-chip { display: inline-flex; align-items: center; gap: 0.35rem; background: rgba(110,231,247,0.1); border: 1px solid rgba(110,231,247,0.25); color: #6ee7f7; padding: 0.35rem 0.85rem; border-radius: 2rem; font-size: 0.875rem; font-weight: 600; margin: 0.25rem; transition: all 0.2s; }
+    .select-field { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12); border-radius: 0.6rem; padding: 0.6rem 1rem; color: #e2e8f0; font-size: 0.875rem; font-family: 'Plus Jakarta Sans', sans-serif; outline: none; }
+    .select-field option { background: #0f172a; color: #e2e8f0; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .status-active { background: #4ade80; box-shadow: 0 0 8px rgba(74,222,128,0.6); animation: pulse 2s infinite; }
+    .status-recording { background: #ef4444; box-shadow: 0 0 10px rgba(239,68,68,0.8); animation: pulse 0.8s infinite; }
+    .status-idle { background: #64748b; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+    .btn-logout { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); color: #fca5a5; padding: 0.4rem 0.9rem; border-radius: 0.5rem; font-size: 0.8rem; font-weight: 500; cursor: pointer; transition: all 0.2s; text-decoration: none; display: inline-block; }
+    .btn-logout:hover { background: rgba(239,68,68,0.15); }
+    .progress-bar-recording { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; background: linear-gradient(90deg, #ef4444, #f97316); width: 0%; transition: width 0.1s linear; }
+  </style>
+</head>
+<body class="grid-bg">
+  <div class="flex min-h-screen">
+
+    <!-- SIDEBAR -->
+    <aside class="w-60 border-r border-white/5 flex flex-col py-6 px-4 fixed top-0 left-0 h-full z-20" style="background: rgba(5,8,16,0.95);">
+      <a href="/" class="flex items-center gap-2 mb-8 px-2">
+        <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style="background: linear-gradient(135deg, #6ee7f7, #818cf8);">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#050810" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0m-2 6V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v4"/><path d="M18 11a2 2 0 0 1 2 2v1a8 8 0 0 1-8 8h-2a8 8 0 0 1-8-8V9a2 2 0 0 1 2-2v0a2 2 0 0 1 2 2"/></svg>
+        </div>
+        <span class="font-display text-base font-bold text-white">SignBridge</span>
+      </a>
+      <nav class="flex flex-col gap-1 flex-1">
+        <a href="/dashboard" class="nav-link"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
+        <a href="/translator" class="nav-link active"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>ISL Translator</a>
+        <a href="/tutor" class="nav-link"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>AI Tutor</a>
+        <a href="/profile" class="nav-link"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Profile</a>
+      </nav>
+      <div class="mt-auto px-2">
+        <p class="text-xs text-slate-600 mb-1">Signed in as</p>
+        <p class="text-sm text-slate-300 font-500 truncate mb-3">{{ session.full_name }}</p>
+        <a href="/logout" class="btn-logout w-full text-center block">Log out</a>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="ml-60 flex-1 p-8">
+      <div class="mb-6 flex items-center justify-between">
+        <div>
+          <div class="flex items-center gap-3">
+            <h1 class="font-display text-2xl font-bold text-white">ISL Translator</h1>
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-cyan-400/10 text-cyan-300 border border-cyan-400/20">70 Classes • LSTM Powered</span>
+          </div>
+          <p class="text-slate-400 text-sm mt-1">Press <strong>Record Sign</strong> (or Spacebar) to capture your 2-second gesture. Sign naturally facing the camera.</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <label class="text-xs text-slate-400 font-medium">Target Language:</label>
+          <select id="languageSelect" class="select-field">
+            <option value="English">English</option>
+            <option value="Hindi">Hindi (हिंदी)</option>
+            <option value="Kannada">Kannada (ಕನ್ನಡ)</option>
+            <option value="Tamil">Tamil (தமிழ்)</option>
+            <option value="Telugu">Telugu (తెలుగు)</option>
+            <option value="Malayalam">Malayalam (മലയാളം)</option>
+            <option value="Marathi">Marathi (मराठी)</option>
+            <option value="Urdu">Urdu (اردو)</option>
+            <option value="Gujarati">Gujarati (ગુજરાતી)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-5 gap-6">
+
+        <!-- CAMERA SECTION (Col 3) -->
+        <div class="col-span-3">
+          <div class="card p-4">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <span class="status-dot status-idle" id="statusDot"></span>
+                <span class="text-xs font-medium text-slate-400" id="statusText">Camera off</span>
+              </div>
+              <div class="flex gap-2">
+                <button class="btn btn-cyan" id="startBtn" onclick="startCamera()">Start Camera</button>
+                <button class="btn btn-ghost" id="stopBtn" onclick="stopCamera()" style="display:none;">Stop</button>
+              </div>
+            </div>
+
+            <!-- Video canvas container -->
+            <div class="relative bg-slate-950 rounded-xl overflow-hidden border border-white/5" style="aspect-ratio: 4/3;">
+              <video id="videoElement" autoplay playsinline></video>
+              <canvas id="videoCanvas"></canvas>
+
+              <!-- Recording indicator badge -->
+              <div id="recordingBadge" class="absolute top-3 left-3 hidden">
+                <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-950/80 border border-red-500/40 text-red-300 text-xs font-semibold backdrop-blur-sm">
+                  <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
+                  <span id="recordingText">Recording sign... 2.0s</span>
+                </div>
+              </div>
+
+              <!-- Processing indicator overlay -->
+              <div id="processingOverlay" class="absolute inset-0 bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center hidden z-10">
+                <div class="w-10 h-10 border-3 border-cyan-400 border-t-transparent rounded-full animate-spin mb-3"></div>
+                <p class="text-cyan-300 font-semibold text-sm">Processing with 70-Class LSTM...</p>
+                <p class="text-slate-400 text-xs mt-1">Extracting wrist-relative landmarks & standardizing</p>
+              </div>
+
+              <!-- Current Prediction Overlay -->
+              <div id="predictionOverlay" class="absolute bottom-3 left-3 right-3 hidden">
+                <div class="rounded-xl px-4 py-3 text-center backdrop-blur-md" style="background: rgba(5,8,16,0.85); border: 1px solid rgba(110,231,247,0.25);">
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="text-xs uppercase tracking-wider text-slate-400 font-semibold">Predicted Sign</span>
+                    <span class="text-xs text-cyan-400 font-bold" id="confidence">0% Confidence</span>
+                  </div>
+                  <p class="font-display text-2xl font-extrabold text-white" id="currentWord">—</p>
+                  
+                  <!-- Top 3 candidates -->
+                  <div id="top3Container" class="mt-2 pt-2 border-t border-white/10 flex justify-center gap-4 text-xs text-slate-400">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Recording progress bar -->
+            <div class="progress-bar-recording mt-3">
+              <div class="progress-bar-fill" id="recordingBar"></div>
+            </div>
+
+            <!-- Action Controls -->
+            <div class="flex gap-3 mt-4">
+              <button class="btn btn-cyan flex-1 py-3 text-base shadow-lg shadow-cyan-500/10" id="captureBtn" onclick="triggerRecordSign()" disabled>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4" fill="currentColor"/></svg>
+                <span>Record Sign (Spacebar)</span>
+              </button>
+              <button class="btn btn-ghost px-4" onclick="removeLastWord()" title="Backspace / Remove last word">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg>
+                Undo
+              </button>
+              <button class="btn btn-danger px-4" onclick="clearSentence()">Clear All</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT PANEL (Col 2: Sentence Buffer & Translation) -->
+        <div class="col-span-2 flex flex-col gap-5">
+
+          <!-- SENTENCE BUFFER CARD -->
+          <div class="card p-5 flex-1 flex flex-col">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-display text-base font-bold text-white flex items-center gap-2">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6ee7f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                Sentence Buffer
+              </h3>
+              <span class="text-xs text-slate-500" id="wordCount">0 words</span>
+            </div>
+
+            <div id="wordChips" class="min-h-24 p-3 rounded-lg bg-black/30 border border-white/5 mb-4 flex-1 flex flex-wrap content-start">
+              <p class="text-slate-600 text-sm italic m-auto">Sign words with the camera to construct your sentence.</p>
+            </div>
+
+            <div class="border-t border-white/10 pt-3">
+              <p class="text-xs uppercase tracking-wider text-slate-500 mb-1 font-semibold">Constructed Text</p>
+              <p class="text-white text-base font-medium min-h-6" id="builtSentence">—</p>
+            </div>
+          </div>
+
+          <!-- TRANSLATION CARD -->
+          <div class="card p-5">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-display text-base font-bold text-white flex items-center gap-2">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8l6 6"/><path d="M4 14l6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="M22 22l-5-10-5 10"/><path d="M14 18h6"/></svg>
+                Speech & Translation
+              </h3>
+            </div>
+
+            <div class="p-3.5 rounded-lg bg-black/40 border border-white/5 mb-4 min-h-16 flex items-center">
+              <p class="text-slate-300 text-sm leading-relaxed" id="translatedText">Translation will appear here after clicking Translate.</p>
+            </div>
+
+            <div class="flex gap-2">
+              <button class="btn btn-cyan flex-1" onclick="translateSentence()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                Translate Sentence
+              </button>
+              <button class="btn btn-ghost" id="audioBtn" onclick="playAudio()" disabled>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                Listen
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    let camera = null, hands = null, isRunning = false;
+    let isRecording = false;
+    let recordedFrames = [];
+    let recordedLandmarks = [];
+    let latestHandsData = { left_hand: null, right_hand: null };
+    let currentAudioFile = null;
+    let wordBuffer = [];
+    const RECORDING_DURATION_MS = 3000; // 3 seconds capture duration (more frames = better linspace)
+    const FRAME_SAMPLE_INTERVAL_MS = 60;  // ~16 fps -> ~50 frames per sign
+
+    const videoEl = document.getElementById('videoElement');
+    const canvas = document.getElementById('videoCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Dedicated offscreen canvas for clean frames without drawn landmarks
+    const cleanCanvas = document.createElement('canvas');
+    cleanCanvas.width = 320;
+    cleanCanvas.height = 240;
+    const cleanCtx = cleanCanvas.getContext('2d');
+
+    // Spacebar shortcut to record sign
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && e.target === document.body && isRunning && !isRecording) {
+        e.preventDefault();
+        triggerRecordSign();
+      }
+    });
+
+    function initMediaPipe() {
+      hands = new Hands({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
+      hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.45, minTrackingConfidence: 0.45 });
+      hands.onResults(onResults);
+    }
+
+    function onResults(results) {
+      canvas.width = videoEl.videoWidth || 640;
+      canvas.height = videoEl.videoHeight || 480;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+
+      latestHandsData = { left_hand: null, right_hand: null };
+
+      if (results.multiHandLandmarks) {
+        for (let i = 0; i < results.multiHandLandmarks.length; i++) {
+          const landmarks = results.multiHandLandmarks[i];
+          drawConnectors(ctx, landmarks, HAND_CONNECTIONS, { color: '#6ee7f7', lineWidth: 2 });
+          drawLandmarks(ctx, landmarks, { color: '#818cf8', lineWidth: 1, radius: 2.5 });
+
+          let label = 'Right';
+          if (results.multiHandedness && results.multiHandedness[i] && results.multiHandedness[i].label) {
+            label = results.multiHandedness[i].label;
+          }
+          // ── Selfie camera correction ──────────────────────────────────────
+          // Browser MediaPipe labels hands from the CAMERA's perspective.
+          // In selfie/mirror mode: your RIGHT hand appears on the LEFT of the
+          // camera image → browser labels it "Left".
+          // Training data used front-facing video → right hand was labeled "Right"
+          // and stored in slots 63-125 with un-mirrored x coordinates.
+          // Fix: (1) flip x (1.0 - x) to un-mirror, (2) swap Left↔Right assignment.
+          const lmData = landmarks.map(pt => ({ x: 1.0 - pt.x, y: pt.y, z: pt.z }));
+          const key = label.toLowerCase() === 'left' ? 'right_hand' : 'left_hand';
+          latestHandsData[key] = lmData;
+        }
+      }
+    }
+
+    function startCamera() {
+      initMediaPipe();
+      camera = new Camera(videoEl, {
+        onFrame: async () => { await hands.send({ image: videoEl }); },
+        width: 640,
+        height: 480
+      });
+      camera.start();
+      isRunning = true;
+      document.getElementById('statusDot').className = 'status-dot status-active';
+      document.getElementById('statusText').textContent = 'Camera active';
+      document.getElementById('startBtn').style.display = 'none';
+      document.getElementById('stopBtn').style.display = '';
+      document.getElementById('captureBtn').disabled = false;
+      document.getElementById('predictionOverlay').classList.remove('hidden');
+    }
+
+    function stopCamera() {
+      if (camera) camera.stop();
+      isRunning = false;
+      isRecording = false;
+      document.getElementById('statusDot').className = 'status-dot status-idle';
+      document.getElementById('statusText').textContent = 'Camera off';
+      document.getElementById('startBtn').style.display = '';
+      document.getElementById('stopBtn').style.display = 'none';
+      document.getElementById('captureBtn').disabled = true;
+      document.getElementById('recordingBadge').classList.add('hidden');
+      document.getElementById('recordingBar').style.width = '0%';
+    }
+
+    async function triggerRecordSign() {
+      if (!isRunning || isRecording) return;
+      isRecording = true;
+      recordedFrames = [];
+      recordedLandmarks = [];
+
+      document.getElementById('statusDot').className = 'status-dot status-recording';
+      document.getElementById('statusText').textContent = 'Recording sign...';
+      document.getElementById('recordingBadge').classList.remove('hidden');
+      document.getElementById('captureBtn').disabled = true;
+
+      const startTime = Date.now();
+      const progressBar = document.getElementById('recordingBar');
+      const badgeText = document.getElementById('recordingText');
+
+      // Track last good frame to use as fallback when hand not detected
+      let lastGoodFrame = null;
+
+      const sampleInterval = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(100, (elapsed / RECORDING_DURATION_MS) * 100);
+        progressBar.style.width = progress + '%';
+        const remaining = Math.max(0, ((RECORDING_DURATION_MS - elapsed) / 1000)).toFixed(1);
+        badgeText.textContent = `Recording sign... ${remaining}s`;
+
+        // Record live numeric landmarks from browser MediaPipe.
+        // ALWAYS push a frame — use last known good frame when hand not detected.
+        // This ensures linspace always has enough frames (no zero-padding bias).
+        if (latestHandsData.left_hand || latestHandsData.right_hand) {
+          lastGoodFrame = JSON.parse(JSON.stringify(latestHandsData));
+          recordedLandmarks.push(lastGoodFrame);
+        } else if (lastGoodFrame) {
+          // Hand briefly lost — repeat last good frame instead of skipping
+          recordedLandmarks.push(JSON.parse(JSON.stringify(lastGoodFrame)));
+        }
+
+        // Also capture clean camera frame (without drawn skeleton)
+        if (videoEl.videoWidth > 0 && videoEl.videoHeight > 0) {
+          cleanCtx.drawImage(videoEl, 0, 0, cleanCanvas.width, cleanCanvas.height);
+          const frameB64 = cleanCanvas.toDataURL('image/jpeg', 0.65);
+          recordedFrames.push(frameB64);
+        }
+
+        if (elapsed >= RECORDING_DURATION_MS) {
+          clearInterval(sampleInterval);
+          finishRecording();
+        }
+      }, FRAME_SAMPLE_INTERVAL_MS);
+    }
+
+    async function finishRecording() {
+      isRecording = false;
+      document.getElementById('recordingBadge').classList.add('hidden');
+      document.getElementById('recordingBar').style.width = '0%';
+      document.getElementById('statusDot').className = 'status-dot status-active';
+      document.getElementById('statusText').textContent = 'Camera active';
+      document.getElementById('processingOverlay').classList.remove('hidden');
+
+      try {
+        const res = await fetch('/api/predict_word', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sequence: recordedLandmarks, frames: recordedFrames })
+        });
+        const data = await res.json();
+
+        if (data.predicted_word && data.predicted_word !== "Unknown") {
+          document.getElementById('currentWord').textContent = data.predicted_word;
+          document.getElementById('confidence').textContent = `${data.confidence.toFixed(1)}% Confidence`;
+          
+          // Display Top-3 candidates
+          if (data.top3 && data.top3.length > 0) {
+            const top3Html = data.top3.map((c, i) => `
+              <span>${i === 0 ? '👑 ' : ''}<strong class="text-slate-200">${c.word}</strong> (${c.confidence}%)</span>
+            `).join('');
+            document.getElementById('top3Container').innerHTML = top3Html;
+          }
+
+          addWordToBuffer(data.predicted_word);
+        } else {
+          document.getElementById('currentWord').textContent = 'Uncertain Sign';
+          document.getElementById('confidence').textContent = 'Try signing clearly';
+        }
+      } catch (err) {
+        console.error(err);
+        document.getElementById('currentWord').textContent = 'Server Error';
+      } finally {
+        document.getElementById('processingOverlay').classList.add('hidden');
+        document.getElementById('captureBtn').disabled = false;
+      }
+    }
+
+    function addWordToBuffer(word) {
+      wordBuffer.push(word);
+      renderSentence();
+    }
+
+    function removeLastWord() {
+      if (wordBuffer.length > 0) {
+        wordBuffer.pop();
+        renderSentence();
+      }
+    }
+
+    function renderSentence() {
+      const container = document.getElementById('wordChips');
+      const countEl = document.getElementById('wordCount');
+      countEl.textContent = `${wordBuffer.length} word${wordBuffer.length === 1 ? '' : 's'}`;
+
+      if (wordBuffer.length === 0) {
+        container.innerHTML = '<p class="text-slate-600 text-sm italic m-auto">Sign words with the camera to construct your sentence.</p>';
+        document.getElementById('builtSentence').textContent = '—';
+      } else {
+        container.innerHTML = wordBuffer.map((w, idx) => `
+          <span class="word-chip">
+            ${w}
+            <button onclick="removeWordAt(${idx})" class="hover:text-red-400 text-cyan-300 ml-1 text-xs">✕</button>
+          </span>
+        `).join('');
+        document.getElementById('builtSentence').textContent = wordBuffer.join(' ');
+      }
+    }
+
+    function removeWordAt(idx) {
+      wordBuffer.splice(idx, 1);
+      renderSentence();
+    }
+
+    function clearSentence() {
+      wordBuffer = [];
+      renderSentence();
+      document.getElementById('translatedText').textContent = 'Translation will appear here after clicking Translate.';
+      document.getElementById('currentWord').textContent = '—';
+      document.getElementById('confidence').textContent = '0% Confidence';
+      document.getElementById('top3Container').innerHTML = '';
+      document.getElementById('audioBtn').disabled = true;
+      currentAudioFile = null;
+    }
+
+    async function translateSentence() {
+      const sentence = wordBuffer.join(' ');
+      if (!sentence.trim()) {
+        alert('Please record at least one word first.');
+        return;
+      }
+      const language = document.getElementById('languageSelect').value;
+      const transEl = document.getElementById('translatedText');
+      transEl.textContent = 'Translating...';
+
+      try {
+        const res = await fetch('/api/translate_sentence', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sentence, language })
+        });
+        const data = await res.json();
+        if (data.translated) {
+          transEl.textContent = data.translated;
+          currentAudioFile = data.audio_file;
+          document.getElementById('audioBtn').disabled = !currentAudioFile;
+        }
+      } catch (e) {
+        transEl.textContent = 'Translation failed. Please check connection.';
+      }
+    }
+
+    function playAudio() {
+      if (currentAudioFile) {
+        const audio = new Audio(`/static/audio/${currentAudioFile}`);
+        audio.play().catch(e => console.error("Playback error", e));
+      }
+    }
+  </script>
+</body>
+</html>
