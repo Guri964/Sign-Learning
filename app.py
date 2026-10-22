@@ -32,4 +32,4 @@ if __name__ == "__main__":
     os.makedirs(Config.AUDIO_FOLDER, exist_ok=True)
     if Config.DEBUG:
         threading.Timer(1.5, open_browser).start()
-    app.run(debug=Config.DEBUG, port=5000)
+    app.run(host=os.getenv("HOST", "0.0.0.0"), port=int(os.getenv("PORT", 5000)), debug=Config.DEBUG)

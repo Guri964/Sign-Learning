@@ -92,9 +92,13 @@ def api_score_attempt():
     if not selected_word:
         return jsonify({"error": "No word selected"}), 400
 
-    # Prioritize clean live hand data from browser MediaPipe
+    # Prioritize clean live hand data from browser MediaPipe (supports both dict and 126-float list)
     hand_data = data.get("hand_data", {})
-    if hand_data and (hand_data.get("left_hand") or hand_data.get("right_hand")):
+    has_direct_hand = (
+        (isinstance(hand_data, dict) and (hand_data.get("left_hand") or hand_data.get("right_hand")))
+        or (isinstance(hand_data, list) and len(hand_data) == 126)
+    )
+    if has_direct_hand:
         landmarks_input = extract_landmarks_from_payload(hand_data)
     else:
         # Fallback to frames if no direct hand landmarks were captured

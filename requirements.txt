@@ -18,9 +18,10 @@ flatbuffers==25.12.19
 fonttools==4.66.1
 gast==0.7.0
 google-pasta==0.2.0
-googletrans==4.0.0rc1
-grpcio==1.84.0
+deep-translator==1.11.4
+espeakng-loader==0.2.4
 gTTS==2.5.1
+lameenc==1.9.0
 h11==0.9.0
 h2==3.2.0
 h5py==3.16.0
