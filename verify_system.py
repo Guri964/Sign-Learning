@@ -120,16 +120,51 @@ lm = extract_landmarks_from_payload(dummy_payload)
 print(f"  Extracted landmark vector shape: {lm.shape}, non-zero entries: {np.count_nonzero(lm)}")
 assert lm.shape == (126,), f"Expected shape (126,), got {lm.shape}"
 
-# 7. Test Flask App & Route Map
-print("\n[6] Checking Flask Application Routes...")
+# 7. Test Flask App, Right-Hand-Only GIF Integrity, & Ghost-Hand Reference Pipeline
+print("\n[6] Checking Flask Application Routes, Right-Hand GIFs, & Ghost-Hand Shapes...")
+from PIL import Image, ImageSequence
 from app import app
+from services.mlp_service import get_all_words, get_target_ghost_hand
 
-expected_endpoints = ["tutor.gestures", "tutor.index", "translator.index", "dashboard", "profile", "tutor.api_get_reference", "tutor.api_score_attempt", "translator.api_predict_word"]
+expected_endpoints = [
+    "tutor.gestures",
+    "tutor.index",
+    "translator.index",
+    "dashboard.index",
+    "dashboard.profile",
+    "tutor.api_get_reference",
+    "tutor.api_score_attempt",
+    "translator.api_predict_word"
+]
 registered_rules = [r.endpoint for r in app.url_map.iter_rules()]
 for ep in expected_endpoints:
     registered = ep in registered_rules
     status = "OK" if registered else "MISSING"
     print(f"  {status:<7} Endpoint: {ep}")
+    assert registered, f"Missing Flask endpoint: {ep}"
+
+all_ghost_valid = 0
+all_right_only_gifs = 0
+for w in get_all_words():
+    ghost = get_target_ghost_hand(w)
+    assert ghost is not None and len(ghost) == 21 and len(ghost[0]) == 3, f"Invalid ghost hand for {w}"
+    all_ghost_valid += 1
+
+    gif_file = os.path.join(Config.GESTURE_GIFS_DIR, f"{w.replace(' ', '_').replace('/', '_')}.gif")
+    im = Image.open(gif_file)
+    has_right_skel = False
+    for fr in ImageSequence.Iterator(im):
+        arr = np.asarray(fr.convert("RGB"), dtype=np.int16)
+        left_cyan = (arr[:, :, 1] > 180) & ((arr[:, :, 2] - arr[:, :, 0]) > 90)
+        left_blue = (arr[:, :, 2] > 190) & ((arr[:, :, 2] - arr[:, :, 0]) > 80)
+        assert not np.any(left_cyan) and not np.any(left_blue), f"Left-hand skeleton pixel found in {gif_file}"
+        if np.count_nonzero(arr[:, :, 0] >= 134) > 30:
+            has_right_skel = True
+    assert has_right_skel, f"Missing right-hand skeleton in {gif_file}"
+    all_right_only_gifs += 1
+
+print(f"  OK      Verified {all_ghost_valid}/70 valid 21-point right-hand ghost targets")
+print(f"  OK      Verified {all_right_only_gifs}/70 GIFs display ONLY right-hand skeleton (0 left-hand pixels)")
 
 print("\n" + "=" * 70)
 print("ALL VERIFICATIONS COMPLETED SUCCESSFULLY!")

@@ -3,7 +3,13 @@ from flask import Blueprint, render_template, request, jsonify, session
 from utils.decorators import login_required
 from utils.helpers import GESTURE_HINTS
 from services.landmark_service import extract_landmarks_from_payload, extract_sequence_from_frames
-from services.mlp_service import predict_and_score, get_reference_landmarks, get_reference_shape, get_all_words
+from services.mlp_service import (
+    predict_and_score,
+    get_reference_landmarks,
+    get_reference_shape,
+    get_target_ghost_hand,
+    get_all_words
+)
 from database import get_connection
 from config import Config
 
@@ -68,6 +74,7 @@ def api_get_reference():
     word = data.get("word", "").strip()
     ref = get_reference_landmarks(word)
     shape = get_reference_shape(word)
+    ghost = get_target_ghost_hand(word)
     
     gif_filename = f"{word.replace(' ', '_').replace('/', '_')}.gif"
     gif_path = os.path.join(Config.GESTURE_GIFS_DIR, gif_filename)
@@ -79,6 +86,7 @@ def api_get_reference():
         "word": word,
         "reference_landmarks": ref,
         "reference_shape": shape,
+        "ghost_hand": ghost,
         "gif_url": gif_url,
         "instructions": instructions
     })
@@ -92,13 +100,22 @@ def api_score_attempt():
     if not selected_word:
         return jsonify({"error": "No word selected"}), 400
 
-    # Prioritize clean live hand data from browser MediaPipe (supports both dict and 126-float list)
+    # Prioritize clean live hand sequence or single-frame hand data from browser MediaPipe
+    hand_sequence = data.get("hand_sequence", [])
     hand_data = data.get("hand_data", {})
+    valid_seq = [
+        extract_landmarks_from_payload(item)
+        for item in hand_sequence
+        if (isinstance(item, dict) and (item.get("left_hand") or item.get("right_hand")))
+        or (isinstance(item, list) and len(item) == 126)
+    ]
     has_direct_hand = (
         (isinstance(hand_data, dict) and (hand_data.get("left_hand") or hand_data.get("right_hand")))
         or (isinstance(hand_data, list) and len(hand_data) == 126)
     )
-    if has_direct_hand:
+    if valid_seq:
+        landmarks_input = valid_seq if len(valid_seq) > 1 else valid_seq[0]
+    elif has_direct_hand:
         landmarks_input = extract_landmarks_from_payload(hand_data)
     else:
         # Fallback to frames if no direct hand landmarks were captured
