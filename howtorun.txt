@@ -1,43 +1,60 @@
-Hi, Hope you are doing good. 
+Sign Bridge — 70-Sign Indian Sign Language (ISL) Recognition & Learning Platform
+================================================================================
 
-Make sure to install the python 3.12.0,
-if there is any other python versions are there then uninstall 
-those and install 3.12.0 only 
+1. Prerequisites
+----------------
+- Python 3.11 or 3.12 (`python --version`)
+- A webcam (720p 16:9 recommended; 640x480 4:3 webcams are automatically aspect-normalized)
+- Linux headless servers only (if `libEGL.so.1` / `libGLESv2.so.2` are missing):
+  sudo apt-get update && sudo apt-get install -y libegl1 libgles2 libgl1
 
-If you dont know how to uninstall and install, then 
-please check youtube.
+2. Virtual Environment & Dependency Setup
+-----------------------------------------
+Linux / macOS:
+  python3 -m venv .venv
+  source .venv/bin/activate
+  pip install --upgrade pip
+  pip install -r requirements.txt
 
-once ur done, download the code and unzip it 
+Windows (PowerShell):
+  python -m venv .venv
+  .\.venv\Scripts\Activate.ps1
+  python -m pip install --upgrade pip
+  pip install -r requirements.txt
 
-make sure u r in this directory "Sign_Language" or directly depends to laptop to laptop 
+Note: `requirements.txt` pins `mediapipe==0.10.31`, `opencv-python-headless==4.11.0.86`,
+`numpy==2.0.2`, `tensorflow==2.20.0`, `gTTS==2.5.1`, and `espeakng-loader==0.2.4` so
+dependencies install cleanly without OpenCV/NumPy conflicts and offline TTS works out of the box.
 
-check the python versiob by this 
+3. Running the Web Application Locally
+--------------------------------------
+  python app.py
 
-python --version, if its showing 3.12.0 then u r good to go 
+Open http://localhost:5000 in Chrome or Edge and allow camera access:
+- Register / Sign In: http://localhost:5000/login
+- Dashboard & Analytics: http://localhost:5000/dashboard
+- AI Sign Tutor (Ghost-Hand Overlay, Practice & Time Attack): http://localhost:5000/tutor
+- 70 Right-Hand Reference Gesture GIF Library: http://localhost:5000/gestures
+- Live ISL Translator (70-Sign Webcam Recognition -> 9 Indian Languages + SOV Gloss GIFs + MP3 Audio):
+  http://localhost:5000/translator
 
-then create the virtual environment by this "python -m venv env"
-it will take few seconds 
+4. Running the Automated Verification & End-to-End Webcam Test Suite
+--------------------------------------------------------------------
+  pytest -v
 
-once done, activate it by this ".\env\Scripts\activate"
+This runs both `tests/test_translator_pipeline.py` and `tests/test_webcam_recognition_70.py`,
+verifying:
+- End-to-end MediaPipe HandLandmarker video frame decoding -> preprocessing -> kinematic extraction -> inference
+- Confused class separation (`Police`, `Bicycle`, `Doctor`, `Hello`, `How are you`, `happy`, `Father`, `Mother`)
+- Multi-position, multi-scale, `4:3` vs `16:9` aspect ratio, and left-handed vs right-handed signer invariance
+- Strict `"Unknown"` rejection on no-hand frames, sparse flicker, random motion, and real out-of-distribution ISL signs
+- Exact `70 / 70` alignment between recognized class labels, `label_map.json`, and displayed right-hand GIFs
+- Preservation of authentication, dashboard, AI Tutor scoring, ghost-hand overlay, leaderboard, and 9-language audio
 
-to cross check weather it is activated or not 
+5. Re-running Dataset Audit & Model Training
+--------------------------------------------
+  python scripts/train_and_evaluate_webcam_model.py
 
-check left side of the directory, "it will show in the env 
-by writeen as green color"
-
-once all okay 
-
-pip install -r requirements.txt 
-
-type this and enter it 
-
-once done, do this 
-
-type this 
-
-python app.py 
-
-done, all goood. 
-
-
-numpy and opencv might be conflict so do it separately by yourself if its facing any issues 
+Training logs, per-class precision/recall/F1 across all 70 signs, and 70x70 confusion matrices
+are written to `models_LSTM/analysis/`. Pre-retrain checkpoints and code backups are preserved in
+`backups/pre_retrain_3cdac8c/`.

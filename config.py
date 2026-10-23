@@ -17,6 +17,9 @@ class Config:
     HAND_LANDMARKER_PATH = os.path.join(MODELS_DIR, "hand_landmarker.task")
 
     LSTM_MODEL_PATH = os.path.join(MODELS_LSTM_DIR, "isl_lstm_model_70.keras")
+    WEBCAM_KINEMATIC_MODEL_PATH = os.path.join(MODELS_LSTM_DIR, "isl_webcam_kinematic_70.keras")
+    KINEMATIC_MEAN_PATH = os.path.join(MODELS_LSTM_DIR, "kin_mean.npy")
+    KINEMATIC_STD_PATH = os.path.join(MODELS_LSTM_DIR, "kin_std.npy")
     MLP_MODEL_PATH = os.path.join(MODELS_MLP_DIR, "isl_mlp_model_70_handaug.keras")
     LABEL_MAP_PATH = os.path.join(MODELS_LSTM_DIR, "label_map.json")
     LABEL_CLASSES_PATH = os.path.join(MODELS_LSTM_DIR, "label_classes.npy")

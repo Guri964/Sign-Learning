@@ -473,16 +473,41 @@
       // 3. Render user's live tracked hand distinctly on top of the ghost-hand target
       if (results.multiHandLandmarks && results.multiHandedness && results.multiHandLandmarks.length > 0) {
         handDetected = true;
+        const arScale = ((w / Math.max(h, 1)) / (16 / 9));
+        const parsedHands = [];
+
         results.multiHandLandmarks.forEach((landmarks, i) => {
           const handedness = results.multiHandedness[i];
           const label = handedness ? handedness.label : 'Right';
+          const score = handedness && handedness.score ? handedness.score : 1.0;
           drawConnectors(ctx, landmarks, HAND_CONNECTIONS, { color: '#6ee7f7', lineWidth: 2.5 });
           drawLandmarks(ctx, landmarks, { color: '#22d3ee', fillColor: '#a5f3fc', lineWidth: 1, radius: 3 });
 
-          const lmArray = landmarks.map(l => ({ x: l.x, y: l.y, z: l.z }));
-          if (label === 'Left') frameData.left_hand = lmArray;
-          else frameData.right_hand = lmArray;
+          const lmArray = landmarks.map(l => ({
+            x: Math.abs(arScale - 1.0) > 0.001 ? 0.5 + (l.x - 0.5) * arScale : l.x,
+            y: l.y,
+            z: Math.abs(arScale - 1.0) > 0.001 ? l.z * arScale : l.z
+          }));
+          parsedHands.push({ label, score, rawWristX: landmarks[0].x, rawWristY: landmarks[0].y, lmArray });
         });
+
+        let cleanHands = parsedHands;
+        if (cleanHands.length === 2) {
+          const wDist = Math.hypot(cleanHands[0].rawWristX - cleanHands[1].rawWristX, cleanHands[0].rawWristY - cleanHands[1].rawWristY);
+          if (wDist < 0.08) {
+            cleanHands = [cleanHands[0].score >= cleanHands[1].score ? cleanHands[0] : cleanHands[1]];
+          }
+        }
+
+        if (cleanHands.length === 2) {
+          cleanHands.sort((a, b) => a.rawWristX - b.rawWristX);
+          frameData.right_hand = cleanHands[0].lmArray;
+          frameData.left_hand = cleanHands[1].lmArray;
+        } else if (cleanHands.length === 1) {
+          // @mediapipe/hands on unmirrored video reports 'Left' for human right hand
+          if (cleanHands[0].label.toLowerCase() === 'left') frameData.right_hand = cleanHands[0].lmArray;
+          else frameData.left_hand = cleanHands[0].lmArray;
+        }
 
         recentHandSequence.push(frameData);
         if (recentHandSequence.length > 20) {
@@ -498,8 +523,8 @@
       initMediaPipe();
       camera = new Camera(videoEl, {
         onFrame: async () => { await hands.send({ image: videoEl }); },
-        width: 640,
-        height: 480
+        width: 1280,
+        height: 720
       });
       try {
         await camera.start();

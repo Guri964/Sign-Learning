@@ -6,9 +6,10 @@ from config import Config
 from utils.helpers import (
     normalize_wrist_relative,
     pad_or_truncate,
+    stabilize_hand_sequence,
     standardize_sequence,
     calculate_shape_accuracy,
-    get_finger_feedback
+    get_finger_feedback,
 )
 
 mlp_model = None
@@ -18,6 +19,7 @@ reference_shapes = None
 reference_landmarks = None
 label_classes = None
 
+
 def load_mlp_model():
     global mlp_model, mlp_mean, mlp_std, reference_shapes, reference_landmarks, label_classes
     if mlp_model is None:
@@ -25,7 +27,7 @@ def load_mlp_model():
         mlp_model = tf.keras.models.load_model(Config.MLP_MODEL_PATH)
         mlp_mean = np.load(Config.MLP_MEAN_PATH)
         mlp_std = np.load(Config.MLP_STD_PATH)
-        
+
         if os.path.exists(Config.REFERENCE_SHAPES_PATH):
             with open(Config.REFERENCE_SHAPES_PATH, "r") as f:
                 reference_shapes = json.load(f)
@@ -41,120 +43,181 @@ def load_mlp_model():
         label_classes = np.load(Config.LABEL_CLASSES_PATH, allow_pickle=True).tolist()
         print(f"MLP model loaded successfully with {len(label_classes)} classes and {len(reference_shapes)} reference shapes.")
 
+
+def _mirror_swap_sequence(padded_20x126: np.ndarray) -> np.ndarray:
+    """Swaps Left <-> Right slots with anatomical sagittal x-reflection (-x)."""
+    out = np.zeros_like(padded_20x126)
+    lh = padded_20x126[:, :63].reshape(-1, 21, 3).copy()
+    rh = padded_20x126[:, 63:].reshape(-1, 21, 3).copy()
+    lh[:, :, 0] *= -1.0
+    rh[:, :, 0] *= -1.0
+    out[:, :63] = rh.reshape(-1, 63)
+    out[:, 63:] = lh.reshape(-1, 63)
+    return out
+
+
 def predict_and_score(landmarks_input, selected_word):
     """
-    Evaluates an attempt against a selected target word.
+    Evaluates an attempt against a selected target word in AI Tutor.
     Accepts either:
       - a single 126-d landmark array
       - a sequence of 126-d frames (e.g. 1.5 - 2s of frames)
     Returns:
-      predicted_word, confidence, accuracy (0-100), feedback, badge_unlocked
+      predicted_word, confidence, target_prob, accuracy (0-100), feedback, badge_unlocked
     """
     if mlp_model is None:
         load_mlp_model()
 
-    # Determine if landmarks_input is a single frame or a sequence
-    is_sequence = isinstance(landmarks_input, (list, np.ndarray)) and len(landmarks_input) > 0 and isinstance(landmarks_input[0], (list, np.ndarray))
+    is_sequence = (
+        isinstance(landmarks_input, (list, np.ndarray))
+        and len(landmarks_input) > 0
+        and isinstance(landmarks_input[0], (list, np.ndarray))
+    )
 
     if is_sequence:
-        seq_raw = [np.array(f, dtype=np.float32) for f in landmarks_input]
-        wrist_rel_seq = [normalize_wrist_relative(f) for f in seq_raw]
-        # Middle frame for shape accuracy
-        mid_idx = len(wrist_rel_seq) // 2
+        clean_seq, active_idx = stabilize_hand_sequence(landmarks_input)
+        if not active_idx:
+            return {
+                "predicted_word": "Unknown",
+                "confidence": 0.0,
+                "target_prob": 0.0,
+                "accuracy": 0.0,
+                "feedback": "Show your hand clearly in front of the camera.",
+                "badge_unlocked": False,
+            }
+        wrist_rel_seq = [normalize_wrist_relative(f) for f in clean_seq]
+        mid_idx = active_idx[len(active_idx) // 2]
         mid_frame = wrist_rel_seq[mid_idx]
     else:
-        frame_raw = np.array(landmarks_input, dtype=np.float32).flatten()
-        mid_frame = normalize_wrist_relative(frame_raw)
+        frame_raw = np.asarray(landmarks_input, dtype=np.float32).flatten()
+        clean_seq, active_idx = stabilize_hand_sequence(frame_raw.reshape(1, -1))
+        if not active_idx:
+            return {
+                "predicted_word": "Unknown",
+                "confidence": 0.0,
+                "target_prob": 0.0,
+                "accuracy": 0.0,
+                "feedback": "Show your hand clearly in front of the camera.",
+                "badge_unlocked": False,
+            }
+        mid_frame = normalize_wrist_relative(clean_seq[0])
+        if np.count_nonzero(mid_frame) < 6:
+            return {
+                "predicted_word": "Unknown",
+                "confidence": 0.0,
+                "target_prob": 0.0,
+                "accuracy": 0.0,
+                "feedback": "Show your hand clearly in front of the camera.",
+                "badge_unlocked": False,
+            }
         wrist_rel_seq = [mid_frame] * Config.SEQUENCE_LENGTH
 
-    # 1. Shape comparison with reference_shapes_70.json
+    # 1. Geometric hand-shape evaluation across peak stroke frames against target prototype
     ref_shape = reference_shapes.get(selected_word) if reference_shapes else None
     shape_accuracy = 0.0
     feedback = "Perform the sign clearly facing the camera."
-    
-    if ref_shape is not None:
-        shape_accuracy, dist = calculate_shape_accuracy(mid_frame, ref_shape)
-        feedback = get_finger_feedback(mid_frame, ref_shape)
-    elif reference_landmarks and selected_word in reference_landmarks:
-        # Fallback to reference_landmarks_70
+
+    candidate_frames = [wrist_rel_seq[i] for i in active_idx] if is_sequence else [mid_frame]
+    eval_shape_target = ref_shape
+    if eval_shape_target is None and reference_landmarks and selected_word in reference_landmarks:
         ref_raw = np.array(reference_landmarks[selected_word], dtype=np.float32)
         ref_rel = normalize_wrist_relative(ref_raw)
-        ref_dummy_shape = {
+        eval_shape_target = {
             "left": ref_rel[:63].reshape(21, 3).tolist() if np.count_nonzero(ref_rel[:63]) > 0 else None,
-            "right": ref_rel[63:].reshape(21, 3).tolist() if np.count_nonzero(ref_rel[63:]) > 0 else None
+            "right": ref_rel[63:].reshape(21, 3).tolist() if np.count_nonzero(ref_rel[63:]) > 0 else None,
         }
-        shape_accuracy, dist = calculate_shape_accuracy(mid_frame, ref_dummy_shape)
-        feedback = get_finger_feedback(mid_frame, ref_dummy_shape)
 
-    # 2. Model prediction
+    if eval_shape_target is not None:
+        best_frame = mid_frame
+        best_s_acc = -1.0
+        for cf in candidate_frames:
+            s_acc, _ = calculate_shape_accuracy(cf, eval_shape_target)
+            if s_acc > best_s_acc:
+                best_s_acc = s_acc
+                best_frame = cf
+        shape_accuracy = max(0.0, best_s_acc)
+        feedback = get_finger_feedback(best_frame, eval_shape_target)
+
+    # 2. Neural classification (anatomically valid mirror-swap + kinematic sequence check when >=3 frames)
     padded = pad_or_truncate(wrist_rel_seq, Config.SEQUENCE_LENGTH)
-    normalized = standardize_sequence(padded, mlp_mean, mlp_std)
-    input_data = normalized.reshape(1, Config.SEQUENCE_LENGTH, Config.NUM_FEATURES)
-
-    probs = mlp_model.predict(input_data, verbose=0)[0]
-
-    # Dual-slot check: evaluate with swapped slots (Left <-> Right) to handle mirror camera
-    perm = np.r_[63:126, 0:63]
-    padded_swapped = padded[:, perm]
-    normalized_swapped = standardize_sequence(padded_swapped, mlp_mean, mlp_std).reshape(1, Config.SEQUENCE_LENGTH, Config.NUM_FEATURES)
-    probs_swapped = mlp_model.predict(normalized_swapped, verbose=0)[0]
+    padded_swapped = _mirror_swap_sequence(padded)
+    mlp_batch = np.concatenate([
+        standardize_sequence(padded, mlp_mean, mlp_std),
+        standardize_sequence(padded_swapped, mlp_mean, mlp_std),
+    ], axis=0)
+    mlp_out = mlp_model(tf.constant(mlp_batch, dtype=tf.float32), training=False).numpy()
+    probs_direct, probs_swapped = mlp_out[0], mlp_out[1]
 
     target_idx = label_classes.index(selected_word) if selected_word in label_classes else -1
-    target_prob_direct = float(probs[target_idx]) * 100.0 if target_idx >= 0 else 0.0
-    target_prob_swapped = float(probs_swapped[target_idx]) * 100.0 if target_idx >= 0 else 0.0
+    t_direct = float(probs_direct[target_idx]) * 100.0 if target_idx >= 0 else 0.0
+    t_swapped = float(probs_swapped[target_idx]) * 100.0 if target_idx >= 0 else 0.0
 
-    if target_prob_swapped > target_prob_direct:
-        probs = probs_swapped
-        target_prob = target_prob_swapped
+    probs = probs_swapped if t_swapped > t_direct else probs_direct
+    target_prob = max(t_direct, t_swapped)
+
+    # If a genuine multi-frame sequence was captured, blend with the 71-class Kinematic+LSTM ensemble
+    if is_sequence and len(active_idx) >= 3:
+        from services import lstm_service
+        seq_word, seq_conf, seq_top3 = lstm_service.predict_word(clean_seq)
+        if seq_word != "Unknown":
+            for item in seq_top3:
+                if item["word"] == selected_word:
+                    target_prob = max(target_prob, float(item["confidence"]))
+            if seq_word == selected_word or seq_conf > float(np.max(probs)) * 100.0:
+                pred_word_final = seq_word
+                conf_final = seq_conf
+            else:
+                pred_idx = int(np.argmax(probs))
+                pred_word_final = label_classes[pred_idx] if pred_idx < len(label_classes) else "Unknown"
+                conf_final = float(probs[pred_idx]) * 100.0
+        else:
+            pred_idx = int(np.argmax(probs))
+            pred_word_final = label_classes[pred_idx] if pred_idx < len(label_classes) else "Unknown"
+            conf_final = float(probs[pred_idx]) * 100.0
     else:
-        target_prob = target_prob_direct
+        pred_idx = int(np.argmax(probs))
+        pred_word_final = label_classes[pred_idx] if pred_idx < len(label_classes) else "Unknown"
+        conf_final = float(probs[pred_idx]) * 100.0
 
-    pred_idx = int(np.argmax(probs))
-    predicted_word = label_classes[pred_idx] if pred_idx < len(label_classes) else "Unknown"
-    confidence = float(probs[pred_idx]) * 100.0
-
-    # Combined composite accuracy (lenient scoring):
-    # Take the BEST signal: geometric shape OR neural confidence for the target word
-    # This prevents a bad shape score from burying a good model prediction and vice-versa
     if target_prob > 0.0 and shape_accuracy > 0.0:
-        # Weighted blend, leaning toward whichever signal is stronger
         composite_acc = max(
             (shape_accuracy * 0.4) + (target_prob * 0.6),
-            (shape_accuracy * 0.6) + (target_prob * 0.4)
+            (shape_accuracy * 0.6) + (target_prob * 0.4),
         )
     elif target_prob > 0.0:
         composite_acc = target_prob
     else:
         composite_acc = shape_accuracy
 
-    # Boost generously if model top prediction matches the target
-    if predicted_word == selected_word:
-        composite_acc = max(composite_acc, confidence * 0.90)
+    if pred_word_final == selected_word:
+        composite_acc = max(composite_acc, conf_final * 0.90)
 
-    # Give a floor: if model has at least some confidence for target (>5%), show at least 15%
     if target_prob > 5.0:
         composite_acc = max(composite_acc, 15.0)
 
     final_accuracy = round(float(np.clip(composite_acc, 0.0, 100.0)), 2)
 
     return {
-        "predicted_word": predicted_word,
-        "confidence": round(confidence, 2),
-        "target_prob": round(target_prob, 2),
+        "predicted_word": pred_word_final,
+        "confidence": round(float(conf_final), 2),
+        "target_prob": round(float(target_prob), 2),
         "accuracy": final_accuracy,
         "feedback": feedback,
-        "badge_unlocked": final_accuracy >= Config.BADGE_THRESHOLD
+        "badge_unlocked": final_accuracy >= Config.BADGE_THRESHOLD,
     }
+
 
 def get_reference_landmarks(word):
     if reference_landmarks is None:
         load_mlp_model()
     return reference_landmarks.get(word, None)
 
+
 def get_reference_shape(word):
     if reference_shapes is None:
         load_mlp_model()
     return reference_shapes.get(word, None)
+
 
 def get_target_ghost_hand(word):
     """Returns a single 21x3 wrist-relative right-hand target skeleton for webcam ghost-hand overlay."""
@@ -172,6 +235,7 @@ def get_target_ghost_hand(word):
     if shape and shape.get("left") is not None:
         return [[-pt[0], pt[1], pt[2]] for pt in shape["left"]]
     return None
+
 
 def get_all_words():
     if label_classes is None:

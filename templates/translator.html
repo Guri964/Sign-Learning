@@ -301,33 +301,68 @@
       hands.onResults(onResults);
     }
 
+    function extractCanonicalHands(results, w, h) {
+      const out = { left_hand: null, right_hand: null };
+      if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+        return out;
+      }
+      const arScale = ((w / Math.max(h, 1)) / (16 / 9));
+      const parsed = [];
+      for (let i = 0; i < results.multiHandLandmarks.length; i++) {
+        const landmarks = results.multiHandLandmarks[i];
+        drawConnectors(ctx, landmarks, HAND_CONNECTIONS, { color: '#6ee7f7', lineWidth: 2 });
+        drawLandmarks(ctx, landmarks, { color: '#818cf8', lineWidth: 1, radius: 2.5 });
+
+        let label = 'Right';
+        let score = 1.0;
+        if (results.multiHandedness && results.multiHandedness[i]) {
+          label = results.multiHandedness[i].label || 'Right';
+          score = results.multiHandedness[i].score || 1.0;
+        }
+        const lmData = landmarks.map(pt => ({
+          x: Math.abs(arScale - 1.0) > 0.001 ? 0.5 + (pt.x - 0.5) * arScale : pt.x,
+          y: pt.y,
+          z: Math.abs(arScale - 1.0) > 0.001 ? pt.z * arScale : pt.z
+        }));
+        parsed.push({ label, score, rawWristX: landmarks[0].x, rawWristY: landmarks[0].y, lmData });
+      }
+
+      // Suppress duplicate MediaPipe box on the exact same physical hand
+      let cleanHands = parsed;
+      if (cleanHands.length === 2) {
+        const wDist = Math.hypot(cleanHands[0].rawWristX - cleanHands[1].rawWristX, cleanHands[0].rawWristY - cleanHands[1].rawWristY);
+        if (wDist < 0.08) {
+          cleanHands = [cleanHands[0].score >= cleanHands[1].score ? cleanHands[0] : cleanHands[1]];
+        }
+      }
+
+      if (cleanHands.length === 2) {
+        // Unmirrored camera frame: smaller x is signer's right_hand; larger x is signer's left_hand
+        cleanHands.sort((a, b) => a.rawWristX - b.rawWristX);
+        out.right_hand = cleanHands[0].lmData;
+        out.left_hand = cleanHands[1].lmData;
+      } else if (cleanHands.length === 1) {
+        // @mediapipe/hands on unmirrored video reports 'Left' for human right hand
+        const key = cleanHands[0].label.toLowerCase() === 'left' ? 'right_hand' : 'left_hand';
+        out[key] = cleanHands[0].lmData;
+      }
+      return out;
+    }
+
     function onResults(results) {
-      canvas.width = videoEl.videoWidth || 640;
-      canvas.height = videoEl.videoHeight || 480;
+      canvas.width = videoEl.videoWidth || 1280;
+      canvas.height = videoEl.videoHeight || 720;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
 
-      latestHandsData = { left_hand: null, right_hand: null };
+      latestHandsData = extractCanonicalHands(results, canvas.width, canvas.height);
 
-      if (results.multiHandLandmarks) {
-        for (let i = 0; i < results.multiHandLandmarks.length; i++) {
-          const landmarks = results.multiHandLandmarks[i];
-          drawConnectors(ctx, landmarks, HAND_CONNECTIONS, { color: '#6ee7f7', lineWidth: 2 });
-          drawLandmarks(ctx, landmarks, { color: '#818cf8', lineWidth: 1, radius: 2.5 });
-
-          let label = 'Right';
-          if (results.multiHandedness && results.multiHandedness[i] && results.multiHandedness[i].label) {
-            label = results.multiHandedness[i].label;
-          }
-          // videoEl is raw unmirrored camera video (#videoCanvas applies CSS scaleX(-1) visually only).
-          // Keep true camera x-coordinates matching Holistic training data; swap only MediaPipe's selfie Left<->Right label.
-          const lmData = landmarks.map(pt => ({ x: pt.x, y: pt.y, z: pt.z }));
-          let key = label.toLowerCase() === 'left' ? 'right_hand' : 'left_hand';
-          if (latestHandsData[key] !== null) {
-            key = key === 'right_hand' ? 'left_hand' : 'right_hand';
-          }
-          latestHandsData[key] = lmData;
-        }
+      // Push true live MediaPipe observations without freezing stale dropped frames
+      if (isRecording) {
+        recordedLandmarks.push({
+          left_hand: latestHandsData.left_hand ? latestHandsData.left_hand.slice() : null,
+          right_hand: latestHandsData.right_hand ? latestHandsData.right_hand.slice() : null
+        });
       }
     }
 
@@ -336,8 +371,8 @@
       initMediaPipe();
       camera = new Camera(videoEl, {
         onFrame: async () => { await hands.send({ image: videoEl }); },
-        width: 640,
-        height: 480
+        width: 1280,
+        height: 720
       });
       camera.start();
       isRunning = true;
@@ -377,7 +412,6 @@
       const startTime = Date.now();
       const progressBar = document.getElementById('recordingBar');
       const badgeText = document.getElementById('recordingText');
-      let lastGoodFrame = null;
 
       const sampleInterval = setInterval(() => {
         const elapsed = Date.now() - startTime;
@@ -385,13 +419,6 @@
         progressBar.style.width = progress + '%';
         const remaining = Math.max(0, ((RECORDING_DURATION_MS - elapsed) / 1000)).toFixed(1);
         badgeText.textContent = `Recording sign... ${remaining}s`;
-
-        if (latestHandsData.left_hand || latestHandsData.right_hand) {
-          lastGoodFrame = JSON.parse(JSON.stringify(latestHandsData));
-          recordedLandmarks.push(lastGoodFrame);
-        } else if (lastGoodFrame) {
-          recordedLandmarks.push(JSON.parse(JSON.stringify(lastGoodFrame)));
-        }
 
         if (videoEl.videoWidth > 0 && videoEl.videoHeight > 0) {
           cleanCtx.drawImage(videoEl, 0, 0, cleanCanvas.width, cleanCanvas.height);

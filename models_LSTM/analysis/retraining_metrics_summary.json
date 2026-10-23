@@ -1,0 +1,180 @@
+{
+  "n_classes": 70,
+  "train_unique_recordings": 494,
+  "test_unique_recordings": 167,
+  "eval_sequences_all70": 334,
+  "eval_sequences_pure_3d_camera": 322,
+  "eval_sequences_real_640x480_laptop": 114,
+  "eval_sequences_real_ood_videos": 207,
+  "before_all70": {
+    "top1": 39.82,
+    "top3": 55.99,
+    "macro_precision": 52.95,
+    "macro_recall": 47.43,
+    "macro_f1": 41.57
+  },
+  "kinematic_alone_all70": {
+    "top1": 76.05,
+    "top3": 89.82,
+    "macro_precision": 65.83,
+    "macro_recall": 68.93,
+    "macro_f1": 65.12
+  },
+  "after_all70": {
+    "top1": 77.25,
+    "top3": 89.82,
+    "macro_precision": 72.65,
+    "macro_recall": 72.96,
+    "macro_f1": 70.4
+  },
+  "pure_3d_camera_64classes": {
+    "before_top1": 39.44,
+    "after_top1": 77.95,
+    "after_top3": 90.68
+  },
+  "before_real_laptop_640x480": {
+    "top1": 18.42,
+    "top3": 35.09
+  },
+  "after_real_laptop_640x480": {
+    "top1": 77.19,
+    "top3": 90.35
+  },
+  "before_real_ood_207": {
+    "unknown_pct": 4.83,
+    "false_confident_60_pct": 29.95
+  },
+  "after_real_ood_207": {
+    "unknown_pct": 61.84,
+    "false_confident_60_pct": 18.36
+  },
+  "confused_focus": {
+    "Police": {
+      "before": {
+        "precision": 100.0,
+        "recall": 50.0,
+        "f1": 66.67,
+        "support": 2
+      },
+      "after": {
+        "precision": 66.67,
+        "recall": 100.0,
+        "f1": 80.0,
+        "support": 2
+      }
+    },
+    "Bicycle": {
+      "before": {
+        "precision": 50.0,
+        "recall": 100.0,
+        "f1": 66.67,
+        "support": 2
+      },
+      "after": {
+        "precision": 100.0,
+        "recall": 100.0,
+        "f1": 100.0,
+        "support": 2
+      }
+    },
+    "Doctor": {
+      "before": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "support": 2
+      },
+      "after": {
+        "precision": 100.0,
+        "recall": 50.0,
+        "f1": 66.67,
+        "support": 2
+      }
+    },
+    "Hello": {
+      "before": {
+        "precision": 20.0,
+        "recall": 20.0,
+        "f1": 20.0,
+        "support": 10
+      },
+      "after": {
+        "precision": 56.25,
+        "recall": 90.0,
+        "f1": 69.23,
+        "support": 10
+      }
+    },
+    "How are you": {
+      "before": {
+        "precision": 100.0,
+        "recall": 20.0,
+        "f1": 33.33,
+        "support": 10
+      },
+      "after": {
+        "precision": 100.0,
+        "recall": 70.0,
+        "f1": 82.35,
+        "support": 10
+      }
+    },
+    "happy": {
+      "before": {
+        "precision": 66.67,
+        "recall": 20.0,
+        "f1": 30.77,
+        "support": 10
+      },
+      "after": {
+        "precision": 100.0,
+        "recall": 90.0,
+        "f1": 94.74,
+        "support": 10
+      }
+    },
+    "Good Morning": {
+      "before": {
+        "precision": 33.33,
+        "recall": 20.0,
+        "f1": 25.0,
+        "support": 10
+      },
+      "after": {
+        "precision": 75.0,
+        "recall": 90.0,
+        "f1": 81.82,
+        "support": 10
+      }
+    },
+    "Father": {
+      "before": {
+        "precision": 100.0,
+        "recall": 50.0,
+        "f1": 66.67,
+        "support": 10
+      },
+      "after": {
+        "precision": 83.33,
+        "recall": 100.0,
+        "f1": 90.91,
+        "support": 10
+      }
+    },
+    "Mother": {
+      "before": {
+        "precision": 66.67,
+        "recall": 100.0,
+        "f1": 80.0,
+        "support": 2
+      },
+      "after": {
+        "precision": 66.67,
+        "recall": 100.0,
+        "f1": 80.0,
+        "support": 2
+      }
+    }
+  },
+  "elapsed_sec": 429.3
+}
